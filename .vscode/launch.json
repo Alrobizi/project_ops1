@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "project_ops (Flutter)",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "project_ops (Flutter Web)",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "-d",
+                "chrome"
+            ]
+        }
+    ]
+}

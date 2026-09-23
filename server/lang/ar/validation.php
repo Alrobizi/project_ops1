@@ -1,0 +1,58 @@
+<?php
+
+return [
+    'accepted' => 'يجب قبول حقل :attribute.',
+    'active_url' => 'حقل :attribute ليس رابطاً صحيحاً.',
+    'after' => 'يجب أن يكون حقل :attribute تاريخاً بعد :date.',
+    'alpha' => 'يجب أن يحتوي حقل :attribute على أحرف فقط.',
+    'array' => 'يجب أن يكون حقل :attribute مصفوفة.',
+    'before' => 'يجب أن يكون حقل :attribute تاريخاً قبل :date.',
+    'between' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على عدد عناصر بين :min و :max.',
+        'numeric' => 'يجب أن تكون قيمة حقل :attribute بين :min و :max.',
+        'string' => 'يجب أن يكون طول حقل :attribute بين :min و :max حرفاً.',
+    ],
+    'boolean' => 'يجب أن يكون حقل :attribute صحيحاً أو خاطئاً.',
+    'confirmed' => 'تأكيد حقل :attribute غير متطابق.',
+    'date' => 'حقل :attribute ليس تاريخاً صحيحاً.',
+    'email' => 'يجب أن يكون حقل :attribute بريداً إلكترونياً صحيحاً.',
+    'exists' => 'القيمة المحددة في حقل :attribute غير موجودة.',
+    'image' => 'يجب أن يكون حقل :attribute صورة.',
+    'in' => 'القيمة المحددة في حقل :attribute غير صالحة.',
+    'integer' => 'يجب أن يكون حقل :attribute رقماً صحيحاً.',
+    'max' => [
+        'array' => 'يجب ألا يحتوي حقل :attribute على أكثر من :max عنصر.',
+        'numeric' => 'يجب ألا تتجاوز قيمة حقل :attribute :max.',
+        'string' => 'يجب ألا يتجاوز طول حقل :attribute :max حرفاً.',
+    ],
+    'min' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على :min عناصر على الأقل.',
+        'numeric' => 'يجب ألا تقل قيمة حقل :attribute عن :min.',
+        'string' => 'يجب ألا يقل طول حقل :attribute عن :min أحرف.',
+    ],
+    'numeric' => 'يجب أن يكون حقل :attribute رقماً.',
+    'required' => 'حقل :attribute مطلوب.',
+    'same' => 'يجب أن يتطابق حقل :attribute مع :other.',
+    'size' => [
+        'numeric' => 'يجب أن تكون قيمة حقل :attribute :size.',
+        'string' => 'يجب أن يكون طول حقل :attribute :size حرفاً.',
+    ],
+    'string' => 'يجب أن يكون حقل :attribute نصاً.',
+    'unique' => 'قيمة حقل :attribute مستخدمة من قبل.',
+    'url' => 'صيغة حقل :attribute غير صحيحة.',
+
+    'attributes' => [
+        'name' => 'الاسم',
+        'email' => 'البريد الإلكتروني',
+        'phone' => 'رقم الجوال',
+        'password' => 'كلمة المرور',
+        'password_confirmation' => 'تأكيد كلمة المرور',
+        'items' => 'المنتجات',
+        'address_id' => 'العنوان',
+        'payment_method' => 'طريقة الدفع',
+        'city' => 'المدينة',
+        'district' => 'الحي',
+        'street' => 'الشارع',
+        'quantity' => 'الكمية',
+    ],
+];

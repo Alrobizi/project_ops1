@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "866528014908",
+    "project_id": "market-5b7c4",
+    "storage_bucket": "market-5b7c4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866528014908:android:7c6de93d8aae517885c939",
+        "android_client_info": {
+          "package_name": "com.market.alrabizi_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD45Hoch3tJHr6cTvYJ53BXZg8fK9KTpbY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
