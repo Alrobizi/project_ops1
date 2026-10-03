@@ -57,49 +57,60 @@ Route::middleware('auth:sanctum')->group(function () {
     // ============================================
     Route::middleware('admin')->group(function () {
 
-    // لوحة التحكم - الإحصائيات
+    // لوحة التحكم - الإحصائيات (متاحة لأي أدمن)
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
-    Route::get('/admin/reports', [AdminController::class, 'reports']);
 
-    // العملاء
-    Route::get('/admin/customers', [AdminController::class, 'customers']);
-    Route::patch('/admin/customers/{id}/toggle', [AdminController::class, 'toggleCustomerStatus']);
+    // التقارير (صلاحية: reports)
+    Route::middleware('permission:reports')->group(function () {
+        Route::get('/admin/reports', [AdminController::class, 'reports']);
+    });
 
-    // الحملات التسويقية
-    Route::get('/admin/campaigns', [AdminController::class, 'campaigns']);
-    Route::post('/admin/campaigns', [AdminController::class, 'storeCampaign']);
-    Route::delete('/admin/campaigns/{id}', [AdminController::class, 'destroyCampaign']);
+    // العملاء (صلاحية: customers)
+    Route::middleware('permission:customers')->group(function () {
+        Route::get('/admin/customers', [AdminController::class, 'customers']);
+        Route::patch('/admin/customers/{id}/toggle', [AdminController::class, 'toggleCustomerStatus']);
+    });
 
-    // الخصومات
-    Route::get('/admin/discounts', [AdminController::class, 'discounts']);
-    Route::post('/admin/discounts', [AdminController::class, 'storeDiscount']);
-    Route::delete('/admin/discounts/{id}', [AdminController::class, 'destroyDiscount']);
-    Route::patch('/admin/discounts/{id}/toggle', [AdminController::class, 'toggleDiscount']);
+    // الحملات التسويقية والإشعارات (صلاحية: marketing)
+    Route::middleware('permission:marketing')->group(function () {
+        Route::get('/admin/campaigns', [AdminController::class, 'campaigns']);
+        Route::post('/admin/campaigns', [AdminController::class, 'storeCampaign']);
+        Route::delete('/admin/campaigns/{id}', [AdminController::class, 'destroyCampaign']);
 
-    // البانرات
-    Route::get('/admin/banners', [AdminController::class, 'banners']);
-    Route::post('/admin/banners', [AdminController::class, 'storeBanner']);
-    Route::delete('/admin/banners/{id}', [AdminController::class, 'destroyBanner']);
-    Route::patch('/admin/banners/{id}/toggle', [AdminController::class, 'toggleBanner']);
+        Route::get('/admin/notifications', [AdminController::class, 'notifications']);
+        Route::post('/admin/notifications', [AdminController::class, 'storeNotification']);
+        Route::delete('/admin/notifications/{id}', [AdminController::class, 'destroyNotification']);
+    });
 
-    // الصفحات
-    Route::get('/admin/pages', [AdminController::class, 'pages']);
-    Route::post('/admin/pages', [AdminController::class, 'storePage']);
-    Route::delete('/admin/pages/{id}', [AdminController::class, 'destroyPage']);
+    // الخصومات (صلاحية: discounts)
+    Route::middleware('permission:discounts')->group(function () {
+        Route::get('/admin/discounts', [AdminController::class, 'discounts']);
+        Route::post('/admin/discounts', [AdminController::class, 'storeDiscount']);
+        Route::delete('/admin/discounts/{id}', [AdminController::class, 'destroyDiscount']);
+        Route::patch('/admin/discounts/{id}/toggle', [AdminController::class, 'toggleDiscount']);
+    });
 
-    // الإشعارات
-    Route::get('/admin/notifications', [AdminController::class, 'notifications']);
-    Route::post('/admin/notifications', [AdminController::class, 'storeNotification']);
-    Route::delete('/admin/notifications/{id}', [AdminController::class, 'destroyNotification']);
+    // المحتوى: البانرات والصفحات والأسئلة الشائعة (صلاحية: content)
+    Route::middleware('permission:content')->group(function () {
+        Route::get('/admin/banners', [AdminController::class, 'banners']);
+        Route::post('/admin/banners', [AdminController::class, 'storeBanner']);
+        Route::delete('/admin/banners/{id}', [AdminController::class, 'destroyBanner']);
+        Route::patch('/admin/banners/{id}/toggle', [AdminController::class, 'toggleBanner']);
 
-    // الأسئلة الشائعة
-    Route::get('/admin/faqs', [AdminController::class, 'faqs']);
-    Route::post('/admin/faqs', [AdminController::class, 'storeFaq']);
-    Route::delete('/admin/faqs/{id}', [AdminController::class, 'destroyFaq']);
+        Route::get('/admin/pages', [AdminController::class, 'pages']);
+        Route::post('/admin/pages', [AdminController::class, 'storePage']);
+        Route::delete('/admin/pages/{id}', [AdminController::class, 'destroyPage']);
 
-    // الإعدادات
-    Route::get('/admin/settings', [AdminController::class, 'settings']);
-    Route::put('/admin/settings', [AdminController::class, 'updateSettings']);
+        Route::get('/admin/faqs', [AdminController::class, 'faqs']);
+        Route::post('/admin/faqs', [AdminController::class, 'storeFaq']);
+        Route::delete('/admin/faqs/{id}', [AdminController::class, 'destroyFaq']);
+    });
+
+    // الإعدادات (صلاحية: settings)
+    Route::middleware('permission:settings')->group(function () {
+        Route::get('/admin/settings', [AdminController::class, 'settings']);
+        Route::put('/admin/settings', [AdminController::class, 'updateSettings']);
+    });
 
     // ============================================
     // إدارة المنتجات والتصنيفات (صلاحية: products)

@@ -18,7 +18,7 @@ class User {
   final String role;
 
   /// أقسام لوحة التحكم المسموحة للمستخدم
-  /// (مصفوفة فارغة تعني وصول كامل لكل الأقسام)
+  /// (الأدمن افتراضياً بدون صلاحيات — يجب منح كل قسم صراحةً)
   final List<String> adminPermissions;
 
   User({
@@ -36,14 +36,12 @@ class User {
   bool get canAccessAdminPanel => role == 'admin';
 
   /// هل يملك المستخدم صلاحية إدارة المنتجات (إضافة/تعديل/تصنيف)؟
-  bool get canManageProducts =>
-      role == 'admin' &&
-      (adminPermissions.isEmpty || adminPermissions.contains('products'));
+  bool get canManageProducts => hasAdminPermission('products');
 
   /// هل يملك المستخدم صلاحية معينة على لوحة التحكم؟
+  /// الأدمن بدون صلاحيات ممنوحة = لا يصل لأي قسم.
   bool hasAdminPermission(String permission) =>
-      role == 'admin' &&
-      (adminPermissions.isEmpty || adminPermissions.contains(permission));
+      role == 'admin' && adminPermissions.contains(permission);
 
   /// صلاحيات مفاتيح أقسام لوحة التحكم
   static const Map<String, String> adminPermissionLabels = {

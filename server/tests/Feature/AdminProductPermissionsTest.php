@@ -132,7 +132,7 @@ class AdminProductPermissionsTest extends TestCase
             'email' => 'owner@store.test',
             'phone' => '700000005',
             'role' => 'admin',
-            'admin_permissions' => [],
+            'admin_permissions' => User::ADMIN_PERMISSIONS,
             'password' => bcrypt('password'),
         ]);
 
@@ -181,13 +181,13 @@ class AdminProductPermissionsTest extends TestCase
         $this->assertFalse(\App\Filament\Resources\UserResource::canAccess());
         $this->assertFalse(\App\Filament\Resources\SettingResource::canAccess());
 
-        // أدمن كامل (صلاحيات فارغة = وصول لكل الأقسام)
+        // أدمن ممنوح كل الأقسام صراحةً
         $owner = User::create([
             'name' => 'مالك المتجر',
             'email' => 'filament.owner@store.test',
             'phone' => '700000008',
             'role' => 'admin',
-            'admin_permissions' => [],
+            'admin_permissions' => User::ADMIN_PERMISSIONS,
             'password' => bcrypt('password'),
         ]);
 
@@ -199,5 +199,43 @@ class AdminProductPermissionsTest extends TestCase
         $this->assertTrue(\App\Filament\Resources\SettingResource::canAccess());
         $this->assertTrue(\App\Filament\Resources\CampaignResource::canAccess());
         $this->assertTrue(\App\Filament\Resources\BannerResource::canAccess());
+    }
+
+    public function test_admin_with_no_permissions_has_access_to_nothing(): void
+    {
+        // أدمن جديد بدون منح أي أقسام = افتراضياً بدون صلاحيات
+        $freshAdmin = User::create([
+            'name' => 'أدمن بلا صلاحيات',
+            'email' => 'no.permissions@store.test',
+            'phone' => '700000009',
+            'role' => 'admin',
+            'admin_permissions' => [],
+            'password' => bcrypt('password'),
+        ]);
+
+        // لا يملك أي صلاحية على أي قسم (Filament)
+        $this->actingAs($freshAdmin);
+
+        $this->assertFalse(\App\Filament\Resources\ProductResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\CategoryResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\OrderResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\UserResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\SettingResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\CampaignResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\BannerResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\DiscountResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\PageResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\FaqResource::canAccess());
+
+        // لا يصل لأي مسار إداري في الـ API
+        $token = $this->loginAndGetToken($freshAdmin);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/admin/products')
+            ->assertStatus(403);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/admin/customers')
+            ->assertStatus(403);
     }
 }

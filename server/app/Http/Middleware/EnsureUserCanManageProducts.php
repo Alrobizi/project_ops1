@@ -9,8 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserCanManageProducts
 {
     /**
-     * يسمح فقط لمستخدم لديه صلاحية "إدارة المنتجات" على لوحة التحكم.
-     * (أدمن بصلاحيات فارغة = وصول كامل)
+     * يسمح فقط لمستخدم لديه صلاحية "المنتجات" الممنوحة صراحةً.
+     * (الأدمن افتراضياً بدون صلاحيات)
      */
     public function handle(Request $request, Closure $next): Response
     {

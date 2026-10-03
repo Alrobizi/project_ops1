@@ -66,7 +66,7 @@ class UserResource extends Resource
                     ->label('أقسام لوحة التحكم المسموحة')
                     ->options(User::ADMIN_PERMISSIONS_LABELS)
                     ->columns(2)
-                    ->helperText('اتركها فارغة لإعطاء الأدمن وصول كامل لكل الأقسام')
+                    ->helperText('افتراضياً بدون أي صلاحيات — حدد الأقسام التي تريد منحها لهذا الأدمن')
                     ->visible(fn (Forms\Get $get): bool => $get('role') === 'admin')
                     ->dehydrated(fn (Forms\Get $get): bool => $get('role') === 'admin'),
 
@@ -118,7 +118,7 @@ class UserResource extends Resource
                         $permissions = $record->admin_permissions ?? [];
 
                         if (empty($permissions)) {
-                            return ['كل الأقسام'];
+                            return ['بدون صلاحيات'];
                         }
 
                         return collect($permissions)
@@ -126,7 +126,7 @@ class UserResource extends Resource
                             ->values()
                             ->toArray();
                     })
-                    ->color('success'),
+                    ->color(fn (User $record): string => empty($record->admin_permissions) ? 'gray' : 'success'),
 
                 Tables\Columns\TextColumn::make('orders_count')
                     ->label('عدد الطلبات')

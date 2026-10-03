@@ -82,7 +82,8 @@ class User extends Authenticatable implements FilamentUser
 
     /**
      * هل يملك المستخدم صلاحية معينة على لوحة التحكم؟
-     * أدمن بصلاحيات فارغة/null = وصول كامل لكل الأقسام.
+     * الأدمن افتراضياً بدون أي صلاحيات — لا يمكنه الوصول لقسم
+     * إلا إذا مُنح ذلك القسم صراحةً في admin_permissions.
      */
     public function hasAdminPermission(string $permission): bool
     {
@@ -92,7 +93,23 @@ class User extends Authenticatable implements FilamentUser
 
         $permissions = $this->admin_permissions ?? [];
 
-        return empty($permissions) || in_array($permission, $permissions);
+        return in_array($permission, $permissions);
+    }
+
+    /**
+     * كل صلاحيات الأدمن (تُمنح صراحةً — لا يوجد وصول كامل تلقائي).
+     */
+    public function hasAllAdminPermissions(): bool
+    {
+        if (! $this->isAdmin()) {
+            return false;
+        }
+
+        $permissions = $this->admin_permissions ?? [];
+
+        return collect(User::ADMIN_PERMISSIONS)->every(
+            fn ($p) => in_array($p, $permissions)
+        );
     }
 
     public function canAccessAdminPanel(): bool

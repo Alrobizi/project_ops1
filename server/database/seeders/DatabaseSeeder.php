@@ -24,8 +24,8 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@store.test',
             'phone' => '700000001',
             'role' => 'admin',
-            // مصفوفة فارغة = وصول كامل لكل أقسام لوحة التحكم
-            'admin_permissions' => [],
+            // الأدمن الرئيسي يُمنح كل الأقسام صراحةً (الافتراضي بدون صلاحيات)
+            'admin_permissions' => User::ADMIN_PERMISSIONS,
             'password' => Hash::make('password'),
         ]);
 

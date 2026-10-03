@@ -5,7 +5,7 @@ namespace App\Filament\Concerns;
 /**
  * يقيّد الوصول لموارد لوحة Filament حسب صلاحيات المستخدم.
  * كل مورد يعرّف static::$adminPermission بمفتاح الصلاحية المطلوبة.
- * (أدمن بصلاحيات فارغة/null = وصول كامل)
+ * (الأدمن افتراضياً بدون صلاحيات — تُمنح صراحةً فقط)
  */
 trait RestrictsByAdminPermission
 {
