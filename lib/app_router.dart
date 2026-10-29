@@ -21,6 +21,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/payment_waiting_screen.dart';
 import 'screens/theme_color_screen.dart';
 import 'models/models.dart';
+import 'core/theme/app_colors.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -271,7 +272,7 @@ class MainNavigationWrapper extends StatelessWidget {
       // زر السلة العائم
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/cart'),
-        backgroundColor: const Color(0xFF7C3AED),
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.shopping_cart, color: Colors.white),
       ),
     );
@@ -295,7 +296,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF7C3AED);
+    final primaryColor = AppColors.primary;
 
     return GestureDetector(
       onTap: onTap,

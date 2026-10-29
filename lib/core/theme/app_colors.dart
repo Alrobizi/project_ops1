@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand Colors (Modern Purple/Blue e-commerce)
-  static const Color primary = Color(0xFF7C3AED); // بنفسجي
-  static const Color primaryAccent = Color(0xFF3B82F6); // أزرق
-  static const Color secondaryAccent = Color(0xFF8B5CF6); // بنفسجي فاتح
-  
+  // ألوان العلامة التجارية — ديناميكية وتتغير عند اختيار لون جديد
+  // من شاشة مكتبة الألوان (Theme Color Screen) عبر ThemeColorNotifier
+  static Color primary = const Color(0xFF7C3AED); // بنفسجي (الافتراضي)
+  static Color primaryAccent = const Color(0xFF3B82F6); // أزرق (مشتق)
+  static Color secondaryAccent = const Color(0xFF8B5CF6); // بنفسجي فاتح (مشتق)
+
+  /// درجة داكنة مشتقة تلقائياً من اللون الأساسي (تُستخدم في التدرجات اللونية)
+  static Color get primaryDark => HSLColor.fromColor(primary)
+      .withLightness((HSLColor.fromColor(primary).lightness - 0.18).clamp(0.0, 1.0))
+      .toColor();
+
   static const Color backgroundLight = Color(0xFFFFFFFF); // أبيض
   static const Color cardLight = Color(0xFFF8FAFC); // رمادي فاتح للبطاقات
   static const Color textPrimaryLight = Color(0xFF1F2937);

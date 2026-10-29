@@ -101,6 +101,15 @@ class Product {
   final bool isFavorite;
   final bool isBestSeller;
 
+  // ----- موقع البائع (Seller Location) -----
+  // الافتراضي: متجر بركة عدن - كريتر (جنوب اليمن) ويُستخدم
+  // في حساب المسافة وفرز المنتجات حسب الأقرب (Nearest First).
+  final String sellerName;
+  final String sellerGovernorate;
+  final String sellerCity;
+  final double sellerLatitude;
+  final double sellerLongitude;
+
   Product({
     required this.id,
     required this.name,
@@ -118,6 +127,11 @@ class Product {
     this.sizes = const [],
     this.isFavorite = false,
     this.isBestSeller = false,
+    this.sellerName = 'متجر بركة عدن',
+    this.sellerGovernorate = 'عدن',
+    this.sellerCity = 'كريتر',
+    this.sellerLatitude = 12.7917,
+    this.sellerLongitude = 45.0067,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
@@ -140,6 +154,12 @@ class Product {
         sizes: List<String>.from(json['sizes'] ?? []),
         isFavorite: json['is_favorite'] ?? false,
         isBestSeller: json['is_best_seller'] ?? false,
+        // موقع البائع من الخادم (مع الافتراضي عدن - كريتر)
+        sellerName: json['seller_name'] ?? 'متجر بركة عدن',
+        sellerGovernorate: json['seller_governorate'] ?? 'عدن',
+        sellerCity: json['seller_city'] ?? 'كريتر',
+        sellerLatitude: (json['seller_latitude'] ?? 12.7917).toDouble(),
+        sellerLongitude: (json['seller_longitude'] ?? 45.0067).toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -159,6 +179,11 @@ class Product {
         'sizes': sizes,
         'is_favorite': isFavorite,
         'is_best_seller': isBestSeller,
+        'seller_name': sellerName,
+        'seller_governorate': sellerGovernorate,
+        'seller_city': sellerCity,
+        'seller_latitude': sellerLatitude,
+        'seller_longitude': sellerLongitude,
       };
 
   Product copyWith({
@@ -178,6 +203,11 @@ class Product {
     List<String>? sizes,
     bool? isFavorite,
     bool? isBestSeller,
+    String? sellerName,
+    String? sellerGovernorate,
+    String? sellerCity,
+    double? sellerLatitude,
+    double? sellerLongitude,
   }) =>
       Product(
         id: id ?? this.id,
@@ -196,6 +226,11 @@ class Product {
         sizes: sizes ?? this.sizes,
         isFavorite: isFavorite ?? this.isFavorite,
         isBestSeller: isBestSeller ?? this.isBestSeller,
+        sellerName: sellerName ?? this.sellerName,
+        sellerGovernorate: sellerGovernorate ?? this.sellerGovernorate,
+        sellerCity: sellerCity ?? this.sellerCity,
+        sellerLatitude: sellerLatitude ?? this.sellerLatitude,
+        sellerLongitude: sellerLongitude ?? this.sellerLongitude,
       );
   /// رمز العملة المعروض (ر.س / ر.ي)
   String get currencySymbol {
@@ -466,56 +501,84 @@ class Order {
 /// نموذج العنوان
 class Address {
   final String id;
-  final String city;
+  final String governorate; // المحافظة (الافتراضي: عدن)
+  final String city; // المدينة/المديرية (الافتراضي: كريتر)
   final String district;
   final String street;
   final String phone;
   final bool isDefault;
 
+  // ----- إحداثيات الموقع (GPS أو التحديد من الخريطة) -----
+  // تستخدم لحساب المسافة بين موقع البائع وموقع المشتري
+  // وتقدير تكلفة وزمن التوصيل في صفحة إتمام الطلب.
+  final double? latitude;
+  final double? longitude;
+  final bool isGpsLocation; // هل العنوان مبني على الموقع الحالي (GPS)؟
+
   Address({
     required this.id,
+    this.governorate = 'عدن',
     required this.city,
     required this.district,
     required this.street,
     required this.phone,
     this.isDefault = false,
+    this.latitude,
+    this.longitude,
+    this.isGpsLocation = false,
   });
 
-  String get fullAddress => '$city، $district، $street';
+  String get fullAddress => '$governorate، $city، $district، $street';
 
   factory Address.fromJson(Map<String, dynamic> json) => Address(
         id: json['id']?.toString() ?? '',
+        governorate: json['governorate'] ?? 'عدن',
         city: json['city'] ?? '',
         district: json['district'] ?? '',
         street: json['street'] ?? '',
         phone: json['phone'] ?? '',
         isDefault: json['is_default'] ?? false,
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
+        isGpsLocation: json['is_gps_location'] ?? false,
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'governorate': governorate,
         'city': city,
         'district': district,
         'street': street,
         'phone': phone,
         'is_default': isDefault,
+        'latitude': latitude,
+        'longitude': longitude,
+        'is_gps_location': isGpsLocation,
       };
 
   Address copyWith({
     String? id,
+    String? governorate,
     String? city,
     String? district,
     String? street,
     String? phone,
     bool? isDefault,
+    double? latitude,
+    double? longitude,
+    bool? isGpsLocation,
   }) =>
       Address(
         id: id ?? this.id,
+        governorate: governorate ?? this.governorate,
         city: city ?? this.city,
         district: district ?? this.district,
         street: street ?? this.street,
         phone: phone ?? this.phone,
         isDefault: isDefault ?? this.isDefault,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+        isGpsLocation: isGpsLocation ?? this.isGpsLocation,
       );
 }
 

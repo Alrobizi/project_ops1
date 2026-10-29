@@ -28,6 +28,12 @@ class ProductResource extends JsonResource
             'sizes' => $this->sizes ?? [],
             'is_featured' => $this->is_featured,
             'is_best_seller' => $this->is_featured,
+            // [الموقع الجغرافي] موقع البائع (الافتراضي: عدن - كريتر)
+            'seller_name' => $this->seller_name ?? 'متجر بركة عدن',
+            'seller_governorate' => $this->seller_governorate ?? 'عدن',
+            'seller_city' => $this->seller_city ?? 'كريتر',
+            'seller_latitude' => (float) ($this->seller_latitude ?? 12.7917),
+            'seller_longitude' => (float) ($this->seller_longitude ?? 45.0067),
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

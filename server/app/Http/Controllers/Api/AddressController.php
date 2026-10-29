@@ -18,12 +18,20 @@ class AddressController extends BaseApiController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'governorate' => ['sometimes', 'string', 'max:100'],
             'city' => ['required', 'string', 'max:100'],
             'district' => ['required', 'string', 'max:100'],
             'street' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:20'],
             'is_default' => ['sometimes', 'boolean'],
+            // [الموقع الجغرافي] إحداثيات المشتري (GPS أو تحديد من الخريطة)
+            'latitude' => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
+            'is_gps_location' => ['sometimes', 'boolean'],
         ]);
+
+        // المحافظة الافتراضية: عدن (جنوب اليمن)
+        $validated['governorate'] = $validated['governorate'] ?? 'عدن';
 
         $user = $request->user();
 

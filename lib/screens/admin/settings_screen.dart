@@ -185,7 +185,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                       color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.palette, color: AppColors.primary, size: 22),
+                    child: Icon(Icons.palette, color: AppColors.primary, size: 22),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -591,7 +591,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             'إنشاء نسخة احتياطية من البيانات',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text('جاري إنشاء نسخة احتياطية...'),
                   backgroundColor: AppColors.primary,
                 ),

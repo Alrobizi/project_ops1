@@ -40,7 +40,7 @@ class SettingResource extends Resource
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255)
-                    ->disabled(),
+                    ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
                 Forms\Components\TextInput::make('value')
                     ->label('القيمة')

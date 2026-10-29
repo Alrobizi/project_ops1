@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/app_providers.dart';
 import 'services/api_service.dart';
 import 'services/firebase_notification_service.dart';
 
@@ -28,17 +29,20 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeState = ref.watch(themeColorProvider);
+
     return MaterialApp.router(
-      title: 'متجرنا',
+      title: 'بركة عدن',
       debugShowCheckedModeBanner: false,
 
-      // الثيم
-      theme: AppTheme.lightTheme,
+      // الثيم الديناميكي حسب لون المستخدم المفضل
+      theme: AppTheme.lightTheme(themeState.primaryColor),
+      darkTheme: AppTheme.darkTheme(themeState.primaryColor),
 
       // دعم RTL واللغة العربية
       locale: const Locale('ar', 'SA'),

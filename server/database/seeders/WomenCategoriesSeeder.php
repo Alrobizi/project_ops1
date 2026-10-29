@@ -13,7 +13,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 1️⃣ الفساتين
         // ============================================================
-        $dresses = Category::create([
+        $dresses = Category::firstOrCreate([
             'name' => 'الفساتين',
             'slug' => 'dresses',
             'icon' => 'checkroom',
@@ -35,7 +35,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($dressesSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -49,7 +49,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 2️⃣ العبايات والجلابيات
         // ============================================================
-        $abayas = Category::create([
+        $abayas = Category::firstOrCreate([
             'name' => 'العبايات والجلابيات',
             'slug' => 'abayas-jalabiyas',
             'icon' => 'checkroom',
@@ -71,7 +71,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($abayasSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -85,7 +85,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 3️⃣ البلوزات والتوبات
         // ============================================================
-        $blouses = Category::create([
+        $blouses = Category::firstOrCreate([
             'name' => 'البلوزات والتوبات',
             'slug' => 'blouses-tops',
             'icon' => 'checkroom',
@@ -106,7 +106,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($blousesSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -120,7 +120,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 4️⃣ التنانير
         // ============================================================
-        $skirts = Category::create([
+        $skirts = Category::firstOrCreate([
             'name' => 'التنانير',
             'slug' => 'skirts',
             'icon' => 'checkroom',
@@ -139,7 +139,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($skirtsSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -153,7 +153,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 5️⃣ البناطيل
         // ============================================================
-        $pants = Category::create([
+        $pants = Category::firstOrCreate([
             'name' => 'البناطيل',
             'slug' => 'pants',
             'icon' => 'checkroom',
@@ -172,7 +172,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($pantsSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -186,7 +186,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 6️⃣ البدلات والأطقم
         // ============================================================
-        $suits = Category::create([
+        $suits = Category::firstOrCreate([
             'name' => 'البدلات والأطقم',
             'slug' => 'suits-sets',
             'icon' => 'checkroom',
@@ -205,7 +205,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($suitsSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -219,7 +219,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 7️⃣ الملابس الخارجية
         // ============================================================
-        $outerwear = Category::create([
+        $outerwear = Category::firstOrCreate([
             'name' => 'الملابس الخارجية',
             'slug' => 'outerwear',
             'icon' => 'checkroom',
@@ -239,7 +239,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($outerwearSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -253,7 +253,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 8️⃣ الحجاب والأوشحة
         // ============================================================
-        $hijab = Category::create([
+        $hijab = Category::firstOrCreate([
             'name' => 'الحجاب والأوشحة',
             'slug' => 'hijab-scarves',
             'icon' => 'spa',
@@ -273,7 +273,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($hijabSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'spa',
@@ -287,7 +287,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 9️⃣ الملابس الرياضية
         // ============================================================
-        $sports = Category::create([
+        $sports = Category::firstOrCreate([
             'name' => 'الملابس الرياضية',
             'slug' => 'sportswear',
             'icon' => 'sports',
@@ -306,7 +306,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($sportsSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'sports',
@@ -320,7 +320,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 🔟 الأحذية
         // ============================================================
-        $shoes = Category::create([
+        $shoes = Category::firstOrCreate([
             'name' => 'الأحذية',
             'slug' => 'shoes',
             'icon' => 'shopping_bag',
@@ -340,7 +340,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($shoesSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'shopping_bag',
@@ -354,7 +354,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 1️⃣1️⃣ الحقائب
         // ============================================================
-        $bags = Category::create([
+        $bags = Category::firstOrCreate([
             'name' => 'الحقائب',
             'slug' => 'bags',
             'icon' => 'backpack',
@@ -374,7 +374,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($bagsSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'backpack',
@@ -388,7 +388,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 1️⃣2️⃣ الإكسسوارات والمجوهرات
         // ============================================================
-        $accessories = Category::create([
+        $accessories = Category::firstOrCreate([
             'name' => 'الإكسسوارات والمجوهرات',
             'slug' => 'accessories-jewelry',
             'icon' => 'diamond',
@@ -409,7 +409,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($accessoriesSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'diamond',
@@ -423,7 +423,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 1️⃣3️⃣ الملابس الداخلية والنوم
         // ============================================================
-        $lingerie = Category::create([
+        $lingerie = Category::firstOrCreate([
             'name' => 'الملابس الداخلية والنوم',
             'slug' => 'lingerie-sleepwear',
             'icon' => 'checkroom',
@@ -442,7 +442,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($lingerieSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'checkroom',
@@ -456,7 +456,7 @@ class WomenCategoriesSeeder extends Seeder
         // ============================================================
         // 1️⃣4️⃣ ملابس المناسبات الخاصة
         // ============================================================
-        $occasions = Category::create([
+        $occasions = Category::firstOrCreate([
             'name' => 'ملابس المناسبات الخاصة',
             'slug' => 'special-occasions',
             'icon' => 'celebration',
@@ -473,7 +473,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($occasionsSubs as $index => $name) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'icon' => 'celebration',
@@ -499,7 +499,7 @@ class WomenCategoriesSeeder extends Seeder
         ];
 
         foreach ($marketingSections as $index => $section) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $section['name'],
                 'slug' => Str::slug($section['name']),
                 'icon' => $section['icon'],

@@ -32,9 +32,9 @@ class DashboardScreen extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.primary, Color(0xFF5B21B6)],
+                      colors: [AppColors.primary, AppColors.primaryDark],
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
                     ),
@@ -186,7 +186,7 @@ class DashboardScreen extends ConsumerWidget {
                               icon: Icons.campaign,
                               title: 'التسويق',
                               subtitle: 'الحملات والإعلانات',
-                              color: const Color(0xFF3B82F6),
+                              color: AppColors.primaryAccent,
                               onTap: () => context.push('/admin/marketing'),
                             ),
                           if (hasPerm('customers'))
@@ -218,7 +218,7 @@ class DashboardScreen extends ConsumerWidget {
                               icon: Icons.article,
                               title: 'المحتوى',
                               subtitle: 'البانرات والصفحات',
-                              color: const Color(0xFF8B5CF6),
+                              color: AppColors.secondaryAccent,
                               onTap: () => context.push('/admin/content'),
                             ),
                           if (hasPerm('settings'))

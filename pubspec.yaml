@@ -1,5 +1,5 @@
 name: project_ops
-description: تطبيق متجر إلكتروني بواجهة عربية RTL
+description: تطبيق متجر بركة عدن الإلكتروني
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -27,10 +27,14 @@ dependencies:
   # UI Components
   cached_network_image: ^3.3.1
   intl: ^0.20.2
+  flutter_colorpicker: ^1.1.0
 
   # Utils
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.0
+
+  # Location & Geolocation (GPS) - تحديد الموقع الحالي وعرض المنتجات القريبة
+  geolocator: ^13.0.2
 
   # Firebase & Google Auth
   firebase_core: ^3.6.0

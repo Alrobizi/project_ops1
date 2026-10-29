@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData lightTheme([Color? primaryColor]) {
+    primaryColor ??= AppColors.primary;
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: Brightness.light,
+      primary: primaryColor,
+      secondary: primaryColor.withValues(alpha: 0.8),
+      surface: AppColors.cardLight,
+      error: AppColors.error,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      primaryColor: AppColors.primary,
+      primaryColor: primaryColor,
       scaffoldBackgroundColor: AppColors.backgroundLight,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
-        secondary: AppColors.primaryAccent,
-        surface: AppColors.cardLight,
-        error: AppColors.error,
-      ),
+      colorScheme: colorScheme,
       textTheme: const TextTheme(
         titleLarge: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),
         bodyMedium: TextStyle(color: AppColors.textPrimaryLight),
@@ -30,9 +35,9 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardLight,
-        selectedItemColor: AppColors.primaryAccent,
+        selectedItemColor: primaryColor,
         unselectedItemColor: AppColors.textSecondaryLight,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -56,24 +61,29 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: primaryColor, width: 1.5),
         ),
       ),
     );
   }
 
-  static ThemeData get darkTheme {
+  static ThemeData darkTheme([Color? primaryColor]) {
+    primaryColor ??= AppColors.primary;
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: Brightness.dark,
+      primary: primaryColor,
+      secondary: AppColors.secondaryAccent,
+      surface: AppColors.cardDark,
+      error: AppColors.error,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: AppColors.primaryAccent,
+      primaryColor: primaryColor,
       scaffoldBackgroundColor: AppColors.backgroundDark,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryAccent,
-        secondary: AppColors.secondaryAccent,
-        surface: AppColors.cardDark,
-        error: AppColors.error,
-      ),
+      colorScheme: colorScheme,
       textTheme: const TextTheme(
         titleLarge: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark),
         bodyMedium: TextStyle(color: AppColors.textPrimaryDark),
@@ -90,9 +100,9 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardDark,
-        selectedItemColor: AppColors.primaryAccent,
+        selectedItemColor: primaryColor,
         unselectedItemColor: AppColors.textSecondaryDark,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -116,7 +126,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
+          borderSide: BorderSide(color: primaryColor, width: 1.5),
         ),
       ),
     );

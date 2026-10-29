@@ -53,7 +53,7 @@ class BoysCategoriesSeeder extends Seeder
         ];
 
         foreach ($boysSubs as $index => $sub) {
-            Category::create([
+            Category::firstOrCreate([
                 'name' => $sub['name'],
                 'slug' => Str::slug($sub['name']),
                 'icon' => $sub['icon'],

@@ -306,7 +306,7 @@ class _DiscountCard extends StatelessWidget {
                         color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.local_offer,
+                      child: Icon(Icons.local_offer,
                           color: AppColors.primary, size: 22),
                     ),
                     const SizedBox(width: 12),
@@ -315,7 +315,7 @@ class _DiscountCard extends StatelessWidget {
                       children: [
                         Text(
                           discount.code,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -397,7 +397,7 @@ class _DiscountCard extends StatelessWidget {
                             : 0,
                         backgroundColor: AppColors.borderLight,
                         valueColor:
-                            const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            AlwaysStoppedAnimation<Color>(AppColors.primary),
                         minHeight: 6,
                         borderRadius: BorderRadius.circular(3),
                       ),
@@ -405,7 +405,7 @@ class _DiscountCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       '${discount.maxUsage > 0 ? ((discount.usedCount / discount.maxUsage) * 100).toStringAsFixed(0) : 0}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,

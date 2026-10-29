@@ -719,7 +719,7 @@ class _BannerCard extends StatelessWidget {
                       onPressed: onToggle,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.edit, color: AppColors.primary),
+                      icon: Icon(Icons.edit, color: AppColors.primary),
                       onPressed: onEdit,
                     ),
                     IconButton(
@@ -769,7 +769,7 @@ class _PageCard extends StatelessWidget {
               color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.article, color: AppColors.primary, size: 22),
+            child: Icon(Icons.article, color: AppColors.primary, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -797,7 +797,7 @@ class _PageCard extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit, color: AppColors.primary),
+            icon: Icon(Icons.edit, color: AppColors.primary),
             onPressed: onEdit,
           ),
           IconButton(
@@ -840,7 +840,7 @@ class _NotificationCard extends StatelessWidget {
               color: AppColors.primaryAccent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.notifications,
+            child: Icon(Icons.notifications,
                 color: AppColors.primaryAccent, size: 22),
           ),
           const SizedBox(width: 12),
@@ -947,7 +947,7 @@ class _FaqCard extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit, color: AppColors.primary),
+            icon: Icon(Icons.edit, color: AppColors.primary),
             onPressed: onEdit,
           ),
           IconButton(

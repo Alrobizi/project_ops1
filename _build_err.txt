@@ -1,0 +1,252 @@
+Warning: SDK processing. This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+lib/screens/home_screen.dart:871:51: Error: Not a constant expression.
+                                  color: Theme.of(context).primaryColor,
+                                                  ^^^^^^^
+lib/screens/home_screen.dart:871:48: Error: Method invocation is not a constant expression.
+                                  color: Theme.of(context).primaryColor,
+                                               ^^
+lib/screens/auth_screen.dart:77:30: Error: Constant evaluation error:
+                child: const Icon(
+                             ^
+lib/screens/auth_screen.dart:80:36: Context: The invocation of 'primary' is not allowed in a constant expression.
+                  color: AppColors.primary,
+                                   ^
+lib/screens/auth_screen.dart:501:34: Error: Constant evaluation error:
+                    child: const Icon(
+                                 ^
+lib/screens/auth_screen.dart:504:40: Context: The invocation of 'primary' is not allowed in a constant expression.
+                      color: AppColors.primary,
+                                       ^
+lib/screens/auth_screen.dart:582:34: Error: Constant evaluation error:
+                    child: const Text(
+                                 ^
+lib/screens/auth_screen.dart:585:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary,
+                                         ^
+lib/screens/auth_screen.dart:617:36: Error: Constant evaluation error:
+                      child: const Text(
+                                   ^
+lib/screens/auth_screen.dart:620:44: Context: The invocation of 'primary' is not allowed in a constant expression.
+                          color: AppColors.primary,
+                                           ^
+lib/screens/auth_screen.dart:635:32: Error: Constant evaluation error:
+                  child: const Column(
+                               ^
+lib/screens/auth_screen.dart:641:44: Context: The invocation of 'primary' is not allowed in a constant expression.
+                          color: AppColors.primary,
+                                           ^
+lib/screens/auth_screen.dart:913:36: Error: Constant evaluation error:
+                      child: const Text(
+                                   ^
+lib/screens/auth_screen.dart:916:44: Context: The invocation of 'primary' is not allowed in a constant expression.
+                          color: AppColors.primary,
+                                           ^
+lib/screens/auth_screen.dart:979:23: Error: Constant evaluation error:
+              ? const SizedBox(
+                      ^
+lib/screens/auth_screen.dart:984:73: Context: The invocation of 'primary' is not allowed in a constant expression.
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                                                        ^
+lib/screens/cart_screen.dart:65:29: Error: Constant evaluation error:
+                      const Icon(
+                            ^
+lib/screens/cart_screen.dart:67:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary,
+                                         ^
+lib/screens/cart_screen.dart:245:36: Error: Constant evaluation error:
+                      style: const TextStyle(
+                                   ^
+lib/screens/cart_screen.dart:247:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary,
+                                         ^
+lib/screens/cart_screen.dart:556:31: Error: Constant evaluation error:
+                        const Icon(
+                              ^
+lib/screens/cart_screen.dart:558:44: Context: The invocation of 'primary' is not allowed in a constant expression.
+                          color: AppColors.primary,
+                                           ^
+lib/screens/cart_screen.dart:598:32: Error: Constant evaluation error:
+                  child: const Text(
+                               ^
+lib/screens/cart_screen.dart:603:40: Context: The invocation of 'primary' is not allowed in a constant expression.
+                      color: AppColors.primary,
+                                       ^
+lib/screens/cart_screen.dart:909:30: Error: Constant evaluation error:
+                style: const TextStyle(
+                             ^
+lib/screens/cart_screen.dart:912:36: Context: The invocation of 'primary' is not allowed in a constant expression.
+                  color: AppColors.primary,
+                                   ^
+lib/screens/cart_screen.dart:1098:32: Error: Constant evaluation error:
+                  style: const TextStyle(
+                               ^
+lib/screens/cart_screen.dart:1100:38: Context: The invocation of 'primary' is not allowed in a constant expression.
+                    color: AppColors.primary,
+                                     ^
+lib/screens/cart_screen.dart:1219:38: Error: Constant evaluation error:
+                        style: const TextStyle(
+                                     ^
+lib/screens/cart_screen.dart:1221:44: Context: The invocation of 'primary' is not allowed in a constant expression.
+                          color: AppColors.primary,
+                                           ^
+lib/screens/cart_screen.dart:1304:40: Error: Constant evaluation error:
+                          style: const TextStyle(
+                                       ^
+lib/screens/cart_screen.dart:1306:46: Context: The invocation of 'primary' is not allowed in a constant expression.
+                            color: AppColors.primary,
+                                             ^
+lib/screens/profile_screen.dart:360:34: Error: Constant evaluation error:
+                    child: const Icon(
+                                 ^
+lib/screens/profile_screen.dart:363:40: Context: The invocation of 'primary' is not allowed in a constant expression.
+                      color: AppColors.primary,
+                                       ^
+lib/screens/profile_screen.dart:371:41: Error: Constant evaluation error:
+                      decoration: const BoxDecoration(
+                                        ^
+lib/screens/profile_screen.dart:372:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary,
+                                         ^
+lib/screens/admin/marketing_screen.dart:762:30: Error: Constant evaluation error:
+                style: const TextStyle(
+                             ^
+lib/screens/admin/marketing_screen.dart:765:36: Context: The invocation of 'primary' is not allowed in a constant expression.
+                  color: AppColors.primary,
+                                   ^
+lib/screens/admin/marketing_screen.dart:796:32: Error: Constant evaluation error:
+                  style: const TextStyle(
+                               ^
+lib/screens/admin/marketing_screen.dart:799:38: Context: The invocation of 'primary' is not allowed in a constant expression.
+                    color: AppColors.primary,
+                                     ^
+lib/screens/admin/customers_screen.dart:249:36: Error: Constant evaluation error:
+                      style: const TextStyle(
+                                   ^
+lib/screens/admin/customers_screen.dart:252:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary,
+                                         ^
+lib/screens/admin/customers_screen.dart:530:34: Error: Constant evaluation error:
+                    style: const TextStyle(
+                                 ^
+lib/screens/admin/customers_screen.dart:533:40: Context: The invocation of 'primary' is not allowed in a constant expression.
+                      color: AppColors.primary,
+                                       ^
+lib/screens/admin/reports_screen.dart:57:23: Error: Constant evaluation error:
+                const SnackBar(
+                      ^
+lib/screens/admin/reports_screen.dart:59:46: Context: The invocation of 'primary' is not allowed in a constant expression.
+                  backgroundColor: AppColors.primary,
+                                             ^
+lib/screens/admin/reports_screen.dart:616:30: Error: Constant evaluation error:
+                style: const TextStyle(
+                             ^
+lib/screens/admin/reports_screen.dart:619:36: Context: The invocation of 'primary' is not allowed in a constant expression.
+                  color: AppColors.primary,
+                                   ^
+lib/screens/admin/reports_screen.dart:707:26: Error: Constant evaluation error:
+            style: const TextStyle(
+                         ^
+lib/screens/admin/reports_screen.dart:710:32: Context: The invocation of 'primary' is not allowed in a constant expression.
+              color: AppColors.primary,
+                               ^
+lib/screens/admin/reports_screen.dart:781:28: Error: Constant evaluation error:
+              style: const TextStyle(
+                           ^
+lib/screens/admin/reports_screen.dart:784:34: Context: The invocation of 'primary' is not allowed in a constant expression.
+                color: AppColors.primary,
+                                 ^
+lib/screens/admin/reports_screen.dart:815:26: Error: Constant evaluation error:
+            style: const TextStyle(
+                         ^
+lib/screens/admin/reports_screen.dart:818:32: Context: The invocation of 'primary' is not allowed in a constant expression.
+              color: AppColors.primary,
+                               ^
+lib/screens/admin/reports_screen.dart:873:26: Error: Constant evaluation error:
+            style: const TextStyle(
+                         ^
+lib/screens/admin/reports_screen.dart:876:32: Context: The invocation of 'primary' is not allowed in a constant expression.
+              color: AppColors.primary,
+                               ^
+lib/screens/admin/discounts_screen.dart:318:40: Error: Constant evaluation error:
+                          style: const TextStyle(
+                                       ^
+lib/screens/admin/discounts_screen.dart:321:46: Context: The invocation of 'primary' is not allowed in a constant expression.
+                            color: AppColors.primary,
+                                             ^
+lib/screens/admin/discounts_screen.dart:408:36: Error: Constant evaluation error:
+                      style: const TextStyle(
+                                   ^
+lib/screens/admin/discounts_screen.dart:411:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary,
+                                         ^
+lib/screens/admin/settings_screen.dart:594:23: Error: Constant evaluation error:
+                const SnackBar(
+                      ^
+lib/screens/admin/settings_screen.dart:596:46: Context: The invocation of 'primary' is not allowed in a constant expression.
+                  backgroundColor: AppColors.primary,
+                                             ^
+lib/screens/admin/products_screen.dart:184:20: Error: Constant evaluation error:
+      return const Center(
+                   ^
+lib/screens/admin/products_screen.dart:185:59: Context: The invocation of 'primary' is not allowed in a constant expression.
+        child: CircularProgressIndicator(color: AppColors.primary),
+                                                          ^
+lib/screens/admin/products_screen.dart:662:36: Error: Constant evaluation error:
+                      child: const Icon(Icons.image_outlined,
+                                   ^
+lib/screens/admin/products_screen.dart:663:44: Context: The invocation of 'primary' is not allowed in a constant expression.
+                          color: AppColors.primary),
+                                           ^
+lib/screens/admin/products_screen.dart:670:34: Error: Constant evaluation error:
+                    child: const Icon(Icons.inventory_2_outlined,
+                                 ^
+lib/screens/admin/products_screen.dart:671:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary),
+                                         ^
+lib/screens/admin/products_screen.dart:703:36: Error: Constant evaluation error:
+                      style: const TextStyle(
+                                   ^
+lib/screens/admin/products_screen.dart:706:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary,
+                                         ^
+lib/screens/admin/products_screen.dart:753:33: Error: Constant evaluation error:
+                    icon: const Icon(Icons.edit_outlined,
+                                ^
+lib/screens/admin/products_screen.dart:754:42: Context: The invocation of 'primary' is not allowed in a constant expression.
+                        color: AppColors.primary, size: 22),
+                                         ^
+lib/screens/notifications_screen.dart:28:28: Error: Constant evaluation error:
+              child: const Text(
+                           ^
+lib/screens/notifications_screen.dart:30:65: Context: The invocation of 'primary' is not allowed in a constant expression.
+                style: TextStyle(fontSize: 12, color: AppColors.primary),
+                                                                ^
+lib/screens/payment_waiting_screen.dart:125:15: Error: Constant evaluation error:
+        const SnackBar(
+              ^
+lib/screens/payment_waiting_screen.dart:127:38: Context: The invocation of 'primary' is not allowed in a constant expression.
+          backgroundColor: AppColors.primary,
+                                     ^
+lib/screens/payment_waiting_screen.dart:257:34: Error: Constant evaluation error:
+                    style: const TextStyle(
+                                 ^
+lib/screens/payment_waiting_screen.dart:260:40: Context: The invocation of 'primary' is not allowed in a constant expression.
+                      color: AppColors.primary,
+                                       ^
+Target kernel_snapshot_program failed: Exception
+
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileFlutterBuildDebug'.
+> Process 'command 'C:\Users\MSI\Downloads\flutter\bin\flutter.bat'' finished with non-zero exit value ١
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 30s
+Gradle task assembleDebug failed with exit code 1

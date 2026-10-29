@@ -84,6 +84,19 @@ class ApiClient {
     return await _dio.delete(path);
   }
 
+  /// جلب الإعدادات العامة للمتجر من لوحة التحكم (مثل رقم الواتساب المخصص لاستلام الحوالات)
+  Future<Map<String, dynamic>?> getPublicSettings() async {
+    try {
+      final response = await get('/settings');
+      if (response.data != null && response.data['data'] != null) {
+        return Map<String, dynamic>.from(response.data['data']);
+      }
+    } catch (_) {
+      // يتم الرجوع للإعدادات المحلية كبديل عند تعذر الاتصال
+    }
+    return null;
+  }
+
   /// إرسال توكن FCM للسيرفر (يتطلب تسجيل الدخول)
   Future<void> sendFcmToken(String fcmToken) async {
     try {
@@ -255,10 +268,15 @@ class AuthService {
 
   /// تسجيل الخروج
   Future<void> logout() async {
-    if (!ApiClient.useDummyData) {
-      await _apiClient.post('/logout');
+    try {
+      if (!ApiClient.useDummyData) {
+        await _apiClient.post('/logout');
+      }
+    } catch (_) {
+      // نتجاهل أخطاء الخادم عند تسجيل الخروج حتى لا يتعطل تسجيل الخروج من التطبيق
+    } finally {
+      _apiClient.clearToken();
     }
-    _apiClient.clearToken();
   }
 }
 

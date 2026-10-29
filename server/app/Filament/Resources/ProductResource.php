@@ -73,7 +73,7 @@ class ProductResource extends Resource
                         Forms\Components\Select::make('currency')
                             ->label('العملة')
                             ->options(Product::CURRENCIES)
-                            ->default('SAR')
+                            ->default('YER')
                             ->required(),
 
                         Forms\Components\TextInput::make('stock')
@@ -143,6 +143,84 @@ class ProductResource extends Resource
                             ->label('ظاهر في التطبيق')
                             ->default(true),
                     ])->columns(2),
+
+                // =====================================================
+                // [الموقع الجغرافي] موقع البائع - إتاحة اختيار المحافظة
+                // والمديرية أو تحديد الإحداثيات يدوياً عبر الخريطة.
+                // الافتراضي: اليمن - عدن - كريتر (جنوب اليمن).
+                // =====================================================
+                Forms\Components\Section::make('موقع البائع (التحديد الجغرافي)')
+                    ->description('يُستخدم لترتيب المنتجات حسب الأقرب للمشتري ولحساب تكلفة وزمن التوصيل')
+                    ->schema([
+                        Forms\Components\TextInput::make('seller_name')
+                            ->label('اسم البائع / المتجر')
+                            ->default('متجر بركة عدن')
+                            ->maxLength(255)
+                            ->required(),
+
+                        Forms\Components\Select::make('seller_governorate')
+                            ->label('المحافظة')
+                            ->options([
+                                'عدن' => 'عدن',
+                                'لحج' => 'لحج',
+                                'أبين' => 'أبين',
+                                'ضالع' => 'ضالع',
+                                'تعز' => 'تعز',
+                                'صنعاء' => 'صنعاء',
+                                'الحديدة' => 'الحديدة',
+                                'إب' => 'إب',
+                                'ذمار' => 'ذمار',
+                                'شبوة' => 'شبوة',
+                                'حضرموت' => 'حضرموت',
+                                'مأرب' => 'مأرب',
+                                'البيضاء' => 'البيضاء',
+                                'الجوف' => 'الجوف',
+                                'عمران' => 'عمران',
+                                'صعدة' => 'صعدة',
+                                'ريمة' => 'ريمة',
+                                'المهرّة' => 'المهرّة',
+                                'سقطرى' => 'سقطرى',
+                            ])
+                            ->default('عدن')
+                            ->live()
+                            ->required(),
+
+                        // مديريات عدن الثمانية عند اختيار محافظة عدن
+                        Forms\Components\Select::make('seller_city')
+                            ->label('المدينة / المديرية (عدن)')
+                            ->options([
+                                'كريتر' => 'كريتر',
+                                'التواهي' => 'التواهي',
+                                'المعلا' => 'المعلا',
+                                'خور مكسر' => 'خور مكسر',
+                                'الشيخ عثمان' => 'الشيخ عثمان',
+                                'المنصورة' => 'المنصورة',
+                                'دار سعد' => 'دار سعد',
+                                'بورمياء' => 'بورمياء',
+                            ])
+                            ->default('كريتر')
+                            ->visible(fn (Forms\Get $get): bool => ($get('seller_governorate') ?? 'عدن') === 'عدن')
+                            ->required(),
+
+                        // مدينة حرة عند اختيار محافظة غير عدن
+                        Forms\Components\TextInput::make('seller_city')
+                            ->label('المدينة / المديرية')
+                            ->maxLength(100)
+                            ->visible(fn (Forms\Get $get): bool => ($get('seller_governorate') ?? 'عدن') !== 'عدن')
+                            ->required(),
+
+                        Forms\Components\TextInput::make('seller_latitude')
+                            ->label('خط العرض (Latitude)')
+                            ->numeric()
+                            ->default(12.7917)
+                            ->helperText('يمكن نسخه من خرائط Google لموقع المتجر بدقة'),
+
+                        Forms\Components\TextInput::make('seller_longitude')
+                            ->label('خط الطول (Longitude)')
+                            ->numeric()
+                            ->default(45.0067)
+                            ->helperText('الإحداثيات الافتراضية: عدن - كريتر'),
+                    ])->columns(3),
             ]);
     }
 
@@ -206,6 +284,15 @@ class ProductResource extends Resource
                     ->label('مميز')
                     ->boolean(),
 
+                // [الموقع الجغرافي] عمود موقع البائع (المحافظة + المديرية)
+                Tables\Columns\TextColumn::make('seller_location')
+                    ->label('موقع البائع')
+                    ->state(fn (Product $record): string => $record->seller_governorate.' - '.$record->seller_city)
+                    ->badge()
+                    ->color('primary')
+                    ->sortable(query: fn (Builder $query, string $direction): Builder =>
+                        $query->orderBy('seller_governorate', $direction)),
+
                 Tables\Columns\ToggleColumn::make('is_active')
                     ->label('ظاهر في التطبيق'),
             ])
@@ -217,6 +304,31 @@ class ProductResource extends Resource
                 Tables\Filters\SelectFilter::make('category_id')
                     ->label('التصنيف')
                     ->relationship('category', 'name'),
+
+                // [الموقع الجغرافي] فلتر المحافظة (اليمن)
+                Tables\Filters\SelectFilter::make('seller_governorate')
+                    ->label('المحافظة')
+                    ->options([
+                        'عدن' => 'عدن',
+                        'لحج' => 'لحج',
+                        'أبين' => 'أبين',
+                        'ضالع' => 'ضالع',
+                        'تعز' => 'تعز',
+                        'صنعاء' => 'صنعاء',
+                        'الحديدة' => 'الحديدة',
+                        'إب' => 'إب',
+                        'ذمار' => 'ذمار',
+                        'شبوة' => 'شبوة',
+                        'حضرموت' => 'حضرموت',
+                        'مأرب' => 'مأرب',
+                        'البيضاء' => 'البيضاء',
+                        'الجوف' => 'الجوف',
+                        'عمران' => 'عمران',
+                        'صعدة' => 'صعدة',
+                        'ريمة' => 'ريمة',
+                        'المهرّة' => 'المهرّة',
+                        'سقطرى' => 'سقطرى',
+                    ]),
 
                 Tables\Filters\SelectFilter::make('stock_status')
                     ->label('حالة المخزون')

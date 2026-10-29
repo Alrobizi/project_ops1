@@ -12,6 +12,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/location_filter_sheet.dart';
 
 // ============================================
 // الشاشة الرئيسية (Home Screen)
@@ -38,8 +39,8 @@ class HomeScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary,
-                      AppColors.primaryAccent.withOpacity(0.9),
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withValues(alpha: 0.8),
                     ],
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
@@ -55,7 +56,7 @@ class HomeScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // الترحيب والإشعارات
+                        // الترحيب والإشعارات وفلتر الموقع
                         Row(
                           mainAxisAlignment:
                               MainAxisAlignment.spaceBetween,
@@ -83,63 +84,70 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ],
                             ),
-                            Consumer(
-                              builder: (context, ref, child) {
-                                final notificationsState =
-                                    ref.watch(notificationsProvider);
-                                final unread =
-                                    notificationsState.unreadCount;
+                            Row(
+                              children: [
+                                // فلتر الموقع الجغرافي (عدن افتراضياً / GPS)
+                                const LocationFilterChip(),
+                                const SizedBox(width: 8),
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final notificationsState =
+                                        ref.watch(notificationsProvider);
+                                    final unread =
+                                        notificationsState.unreadCount;
 
-                                return Stack(
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                      ),
-                                      child: IconButton(
-                                        icon: const Icon(
-                                          Icons.notifications_outlined,
-                                          color: Colors.white,
-                                        ),
-                                        onPressed: () {
-                                          context.push('/notifications');
-                                        },
-                                      ),
-                                    ),
-                                    if (unread > 0)
-                                      Positioned(
-                                        top: 4,
-                                        right: 4,
-                                        child: Container(
-                                          padding:
-                                              const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFEF4444),
-                                            shape: BoxShape.circle,
+                                    return Stack(
+                                      children: [
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
-                                          constraints:
-                                              const BoxConstraints(
-                                            minWidth: 18,
-                                            minHeight: 18,
-                                          ),
-                                          child: Text(
-                                            unread > 99
-                                                ? '99+'
-                                                : '$unread',
-                                            style: const TextStyle(
+                                          child: IconButton(
+                                            icon: const Icon(
+                                              Icons.notifications_outlined,
                                               color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
                                             ),
-                                            textAlign: TextAlign.center,
+                                            onPressed: () {
+                                              context.push('/notifications');
+                                            },
                                           ),
                                         ),
-                                      ),
-                                  ],
-                                );
-                              },
+                                        if (unread > 0)
+                                          Positioned(
+                                            top: 4,
+                                            right: 4,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.all(4),
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFFEF4444),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              constraints:
+                                                  const BoxConstraints(
+                                                minWidth: 18,
+                                                minHeight: 18,
+                                              ),
+                                              child: Text(
+                                                unread > 99
+                                                    ? '99+'
+                                                    : '$unread',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -295,12 +303,12 @@ class HomeScreen extends ConsumerWidget {
                                     horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? AppColors.primary
+                                      ? Theme.of(context).primaryColor
                                       : AppColors.cardLight,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: isSelected
-                                        ? AppColors.primary
+                                        ? Theme.of(context).primaryColor
                                         : AppColors.borderLight,
                                   ),
                                 ),
@@ -512,7 +520,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: category.image != null &&
@@ -527,20 +535,20 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                           memCacheWidth: 300,
                                           placeholder: (context, url) => Icon(
                                             _getCategoryIcon(category.icon),
-                                            color: AppColors.primary,
+                                            color: Theme.of(context).primaryColor,
                                             size: 24,
                                           ),
                                           errorWidget: (context, url, error) =>
                                               Icon(
                                             _getCategoryIcon(category.icon),
-                                            color: AppColors.primary,
+                                            color: Theme.of(context).primaryColor,
                                             size: 24,
                                           ),
                                         ),
                                       )
                                     : Icon(
                                         _getCategoryIcon(category.icon),
-                                        color: AppColors.primary,
+                                        color: Theme.of(context).primaryColor,
                                         size: 24,
                                       ),
                               ),
@@ -563,7 +571,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                 isExpanded
                                     ? Icons.expand_less
                                     : Icons.expand_more,
-                                color: AppColors.primary,
+                                color: Theme.of(context).primaryColor,
                               ),
                             ),
                             // الأقسام الفرعية
@@ -588,20 +596,20 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                           vertical: 8,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppColors.primary
-                                              .withOpacity(0.05),
+                                          color: Theme.of(context).primaryColor
+                                              .withValues(alpha: 0.05),
                                           borderRadius:
                                               BorderRadius.circular(20),
                                           border: Border.all(
-                                            color: AppColors.primary
-                                                .withOpacity(0.2),
+                                            color: Theme.of(context).primaryColor
+                                                .withValues(alpha: 0.2),
                                           ),
                                         ),
                                         child: Text(
                                           subcategory.name,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 13,
-                                            color: AppColors.primary,
+                                            color: Theme.of(context).primaryColor,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -820,7 +828,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                       const EdgeInsets.symmetric(horizontal: 4),
                                   decoration: BoxDecoration(
                                     color: _currentImageIndex == index
-                                        ? AppColors.primary
+                                        ? Theme.of(context).primaryColor
                                         : Colors.white.withOpacity(0.5),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
@@ -865,10 +873,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                             children: [
                               Text(
                                 '${product.price.toStringAsFixed(0)} ${product.currencySymbol}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
+                                  color: Theme.of(context).primaryColor,
                                 ),
                               ),
                               if (product.oldPrice != null) ...[
@@ -926,7 +934,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: isSelected
-                                            ? AppColors.primary
+                                            ? Theme.of(context).primaryColor
                                             : Colors.transparent,
                                         width: 2,
                                       ),
@@ -969,10 +977,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                     setState(() => _selectedSize = size);
                                   },
                                   selectedColor:
-                                      AppColors.primary.withOpacity(0.2),
+                                      Theme.of(context).primaryColor.withValues(alpha: 0.2),
                                   labelStyle: TextStyle(
                                     color: isSelected
-                                        ? AppColors.primary
+                                        ? Theme.of(context).primaryColor
                                         : AppColors.textPrimaryLight,
                                     fontWeight: isSelected
                                         ? FontWeight.bold
@@ -1049,10 +1057,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         ),
                         Text(
                           '${(product.price * _quantity).toStringAsFixed(0)} ${product.currencySymbol}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                            color: Theme.of(context).primaryColor,
                           ),
                         ),
                       ],

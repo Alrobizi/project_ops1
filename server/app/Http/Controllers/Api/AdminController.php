@@ -37,6 +37,32 @@ class AdminController extends Controller
         ]);
     }
 
+    public function orders(Request $request)
+    {
+        $query = Order::with(['user', 'items.product', 'address'])->latest();
+        if ($request->has('status') && $request->status !== 'all' && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+        return response()->json([
+            'success' => true,
+            'data' => $query->paginate(25)
+        ]);
+    }
+
+    public function updateOrderStatus(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $validated = $request->validate([
+            'status' => 'required|string|in:pending,processing,shipped,delivered,cancelled'
+        ]);
+        $order->update(['status' => $validated['status']]);
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث حالة الطلب بنجاح',
+            'data' => $order
+        ]);
+    }
+
     // ============================================
     // الحملات التسويقية
     // ============================================
@@ -222,6 +248,24 @@ class AdminController extends Controller
     // ============================================
     // الإعدادات
     // ============================================
+    public function publicSettings()
+    {
+        $whatsappNumber = Setting::get('whatsapp_number')
+            ?: Setting::get('whatsapp_transfer_number')
+            ?: Setting::get('store_phone');
+
+        return response()->json([
+            'data' => [
+                'whatsapp_number' => $whatsappNumber,
+                'store_phone' => Setting::get('store_phone'),
+                'store_name' => Setting::get('store_name'),
+                'store_email' => Setting::get('store_email'),
+                'store_currency' => Setting::get('store_currency', 'YER'),
+                'transfer_recipient_name' => Setting::get('transfer_recipient_name', 'صبري العبد ناصر الربيزي'),
+            ],
+        ]);
+    }
+
     public function settings()
     {
         $settings = Setting::all()->groupBy('group');

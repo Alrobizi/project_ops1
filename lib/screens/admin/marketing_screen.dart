@@ -241,7 +241,7 @@ class _MarketingScreenState extends ConsumerState<MarketingScreen>
                         color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.campaign, color: AppColors.primary),
+                      child: Icon(Icons.campaign, color: AppColors.primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -754,12 +754,12 @@ class _PromotionCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.local_offer,
+              Icon(Icons.local_offer,
                   size: 16, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 'خصم ${promotion.discountPercent}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -789,11 +789,11 @@ class _PromotionCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.confirmation_number, size: 18, color: AppColors.primary),
+                Icon(Icons.confirmation_number, size: 18, color: AppColors.primary),
                 const SizedBox(width: 8),
                 Text(
                   promotion.code,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,

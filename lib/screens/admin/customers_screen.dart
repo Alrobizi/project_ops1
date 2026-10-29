@@ -246,7 +246,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen>
                     backgroundColor: AppColors.primary.withOpacity(0.1),
                     child: Text(
                       customer.name.substring(0, 1),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -527,7 +527,7 @@ class _CustomerCard extends StatelessWidget {
                   backgroundColor: AppColors.primary.withOpacity(0.1),
                   child: Text(
                     customer.name.substring(0, 1),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,

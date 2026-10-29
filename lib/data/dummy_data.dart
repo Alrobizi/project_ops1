@@ -414,23 +414,29 @@ class DummyData {
     ),
   ];
 
-  // العناوين
+  // العناوين (الموقع الافتراضي: اليمن - عدن - تم استبدال المدن السعودية)
   static final List<Address> addresses = [
     Address(
       id: '1',
-      city: 'الرياض',
-      district: 'حي النرجس',
-      street: 'شارع الأمير محمد بن سلمان',
+      governorate: 'عدن',
+      city: 'كريتر',
+      district: 'حي الجمهورية',
+      street: 'شارع القاسم، مبنى 12',
       phone: '712345678',
       isDefault: true,
+      latitude: 12.7917,
+      longitude: 45.0067,
     ),
     Address(
       id: '2',
-      city: 'جدة',
+      governorate: 'عدن',
+      city: 'المنصورة',
       district: 'حي الروضة',
-      street: 'شارع التحلية',
+      street: 'شارع المطار، قرب دوار 40',
       phone: '798765432',
       isDefault: false,
+      latitude: 12.7853,
+      longitude: 45.0631,
     ),
   ];
 

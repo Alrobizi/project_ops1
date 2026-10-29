@@ -1,0 +1,74 @@
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+٣ warnings
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:checkDebugDuplicateClasses'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Failed to transform armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:armeabi_v7a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1) to match attributes {artifactType=enumerated-runtime-classes, org.gradle.category=library, org.gradle.libraryelements=jar, org.gradle.status=release, org.gradle.usage=java-runtime}.
+      > Could not download armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:armeabi_v7a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1)
+         > Could not get resource 'https://storage.googleapis.com/download.flutter.io/io/flutter/armeabi_v7a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+            > Could not GET 'https://storage.googleapis.com/download.flutter.io/io/flutter/armeabi_v7a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+               > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.14/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                  > Remote host terminated the handshake
+   > Failed to transform arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:arm64_v8a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1) to match attributes {artifactType=enumerated-runtime-classes, org.gradle.category=library, org.gradle.libraryelements=jar, org.gradle.status=release, org.gradle.usage=java-runtime}.
+      > Could not download arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:arm64_v8a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1)
+         > Could not get resource 'https://storage.googleapis.com/download.flutter.io/io/flutter/arm64_v8a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+            > Could not GET 'https://storage.googleapis.com/download.flutter.io/io/flutter/arm64_v8a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+               > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.14/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                  > Remote host terminated the handshake
+   > Failed to transform x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:x86_64_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1) to match attributes {artifactType=enumerated-runtime-classes, org.gradle.category=library, org.gradle.libraryelements=jar, org.gradle.status=release, org.gradle.usage=java-runtime}.
+      > Could not download x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:x86_64_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1)
+         > Could not get resource 'https://storage.googleapis.com/download.flutter.io/io/flutter/x86_64_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+            > Could not GET 'https://storage.googleapis.com/download.flutter.io/io/flutter/x86_64_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+               > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.14/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                  > Remote host terminated the handshake
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 13m 32s
+[!] Gradle threw an error while downloading artifacts from the network.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> Error while evaluating property 'friendPathsSet$kotlin_gradle_plugin_common' of task ':app:compileDebugKotlin'.
+   > Could not resolve all files for configuration ':app:debugCompileClasspath'.
+      > Failed to transform armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:armeabi_v7a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1) to match attributes {artifactType=android-classes-jar, org.gradle.category=library, org.gradle.libraryelements=jar, org.gradle.status=release, org.gradle.usage=java-api}.
+         > Could not download armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:armeabi_v7a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1)
+            > Could not get resource 'https://storage.googleapis.com/download.flutter.io/io/flutter/armeabi_v7a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+               > Could not GET 'https://storage.googleapis.com/download.flutter.io/io/flutter/armeabi_v7a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/armeabi_v7a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+                  > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.14/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                     > Remote host terminated the handshake
+      > Failed to transform arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:arm64_v8a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1) to match attributes {artifactType=android-classes-jar, org.gradle.category=library, org.gradle.libraryelements=jar, org.gradle.status=release, org.gradle.usage=java-api}.
+         > Could not download arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:arm64_v8a_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1)
+            > Could not get resource 'https://storage.googleapis.com/download.flutter.io/io/flutter/arm64_v8a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+               > Could not GET 'https://storage.googleapis.com/download.flutter.io/io/flutter/arm64_v8a_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/arm64_v8a_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+                  > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.14/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                     > Remote host terminated the handshake
+      > Failed to transform x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:x86_64_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1) to match attributes {artifactType=android-classes-jar, org.gradle.category=library, org.gradle.libraryelements=jar, org.gradle.status=release, org.gradle.usage=java-api}.
+         > Could not download x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar (io.flutter:x86_64_debug:1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1)
+            > Could not get resource 'https://storage.googleapis.com/download.flutter.io/io/flutter/x86_64_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+               > Could not GET 'https://storage.googleapis.com/download.flutter.io/io/flutter/x86_64_debug/1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1/x86_64_debug-1.0.0-5a2a6a42cce67f965cf540fcecf616faca624aa1.jar'.
+                  > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.14/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                     > Remote host terminated the handshake
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 25s
+[!] Gradle threw an error while downloading artifacts from the network.
+Gradle task assembleDebug failed with exit code 1

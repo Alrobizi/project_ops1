@@ -14,6 +14,8 @@ import '../models/models.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
 import '../data/dummy_data.dart';
+import '../core/location/app_locations.dart';
+import '../services/location_service.dart';
 
 // ============================================
 // شاشة سلة المشتريات (Cart Screen)
@@ -62,7 +64,7 @@ class CartScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.local_shipping,
                         color: AppColors.primary,
                       ),
@@ -82,7 +84,7 @@ class CartScreen extends ConsumerWidget {
                   LinearProgressIndicator(
                     value: cart.subtotal / CartNotifier.freeShippingThreshold,
                     backgroundColor: AppColors.borderLight,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
+                    valueColor: AlwaysStoppedAnimation<Color>(
                       AppColors.primary,
                     ),
                     borderRadius: BorderRadius.circular(4),
@@ -242,7 +244,7 @@ class _CartItemCard extends StatelessWidget {
                   children: [
                     Text(
                       '${item.product.price.toStringAsFixed(0)} ${item.product.currencySymbol}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                         fontSize: 16,
@@ -323,7 +325,8 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Address? _selectedAddress;
-  String _paymentMethod = 'محفظة أم فلوس';
+  // [تعديل]: جعل وسيلة الدفع الافتراضية هي "إرسال حوالة مباشرة" لكون المحافظ الرقمية ستتوفر قريباً
+  String _paymentMethod = 'إرسال حوالة مباشرة';
   bool _isProcessing = false;
 
   final List<Map<String, dynamic>> _paymentOptions = [
@@ -331,28 +334,28 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       'id': 'محفظة أم فلوس',
       'title': 'محفظة أم فلوس',
       'subtitle': 'خدمة دفع مباشر - تحويل آلي',
-      'badge': 'دفع مباشر',
+      'badge': 'قريباً',
       'asset': 'assets/images/mfloos_logo.jpg',
       'color': const Color(0xFF6B3BA7),
-      'accountInfo': 'رقم محفظة أم فلوس المتجر: 770000000',
+      'accountInfo': null,
     },
     {
-      'id': 'محفظة القطيبي',
-      'title': 'محفظة القطيبي',
+      'id': 'محفظة بنك القطيبي',
+      'title': 'محفظة بنك القطيبي',
       'subtitle': 'خدمة دفع مباشر (بنك القطيبي)',
-      'badge': 'دفع مباشر',
+      'badge': 'قريباً',
       'asset': 'assets/images/qutaibi_logo.jpg',
       'color': const Color(0xFF8CC63F),
-      'accountInfo': 'حساب القطيبي (لحظات): 12345678 - باسم المتجر',
+      'accountInfo': null,
     },
     {
       'id': 'إرسال حوالة مباشرة',
       'title': 'إرسال حوالة مباشرة',
-      'subtitle': 'عبر شركات الصرافة والتحويلات',
+      'subtitle': 'عبر شركات الصرافة والتحويلات إلى حساب المتجر',
       'badge': 'حوالة مصرفية',
       'icon': Icons.swap_horiz_rounded,
       'color': Colors.blue.shade700,
-      'accountInfo': 'تحويل باسم: متجر النخبة الإلكتروني (صنعاء/عدن)',
+      'accountInfo': 'التحويل باسم: صبري العبد ناصر الربيزي',
     },
     {
       'id': 'الدفع عند الاستلام',
@@ -374,15 +377,191 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Future<void> _launchWhatsApp(Order order) async {
-    const String adminPhone = '+967770000000';
+  // =========================================================================
+  // [الموقع الجغرافي]: استخدام موقع المشتري الحالي (GPS) كعنوان توصيل
+  // يطلب الإذن، يجلب الإحداثيات، ثم ينشئ عنواناً مؤقتاً قريباً من المشتري
+  // =========================================================================
+  Future<void> _useCurrentLocationAsAddress() async {
+    final result = await LocationService.getCurrentPosition();
+
+    if (!result.success || result.position == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.errorMessage ?? 'تعذر تحديد الموقع الحالي'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      // فتح إعدادات التطبيق إذا كان الإذن مرفوضاً نهائياً
+      if (result.errorMessage?.contains('نهائياً') ?? false) {
+        await LocationService.openAppPermissionSettings();
+      }
+      return;
+    }
+
+    final position = result.position!;
+    // إنشاء عنوان مؤقت مبني على إحداثيات GPS (موقعي الحالي)
+    final gpsAddress = Address(
+      id: 'gps_current',
+      governorate: AppLocationDefaults.defaultGovernorate,
+      city: 'موقعي الحالي',
+      district: 'تحديد تلقائي عبر GPS',
+      street: 'دقة الموقع: ±${position.accuracy.round()} متر',
+      phone: _selectedAddress?.phone ?? '712345678',
+      isDefault: true,
+      latitude: position.latitude,
+      longitude: position.longitude,
+      isGpsLocation: true,
+    );
+
+    if (!mounted) return;
+    setState(() => _selectedAddress = gpsAddress);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('تم تحديد موقعك الحالي - سيتم حساب التوصيل من أقرب نقطة'),
+        backgroundColor: AppColors.success,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // =========================================================================
+  // [تعديل 2 & 3]: جلب رقم هاتف الواتساب المخصص لاستلام الحوالات من إعدادات لوحة التحكم
+  // =========================================================================
+  Future<String?> _getWhatsAppNumberFromBackend() async {
+    try {
+      // 1. استدعاء مسار الإعدادات العامة من الخادم (المربوط بلوحة التحكم Filament)
+      final apiClient = ref.read(apiClientProvider);
+      final settings = await apiClient.getPublicSettings();
+      if (settings != null) {
+        final whatsapp = settings['whatsapp_number']?.toString().trim();
+        if (whatsapp != null && whatsapp.isNotEmpty) {
+          return whatsapp;
+        }
+        final storePhone = settings['store_phone']?.toString().trim();
+        if (storePhone != null && storePhone.isNotEmpty) {
+          return storePhone;
+        }
+      }
+    } catch (_) {
+      // متابعة الفحص في حالة عدم الاتصال بالسيرفر
+    }
+
+    // 2. فحص إعدادات المتجر في حالة التطبيق (StoreSettings) كخيار احتياطي
+    try {
+      final localStorePhone = ref.read(adminProvider).storeSettings.phone.trim();
+      if (localStorePhone.isNotEmpty) {
+        return localStorePhone;
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  // =========================================================================
+  // [تعديل 2]: إنشاء رابط واتساب مباشر بالصيغة القياسية: https://wa.me/<WHATSAPP_NUMBER>
+  // وتوجيه المستخدم مباشرة إلى محادثة الواتساب مع دعم التطبيق والمتصفح
+  // =========================================================================
+  Future<void> _launchDirectWhatsApp({Order? order}) async {
+    // جلب رقم الواتساب المخصص من لوحة التحكم
+    final rawNumber = await _getWhatsAppNumberFromBackend();
+
+    // [معالجة الأخطاء]: في حال عدم وجود رقم واتساب معرف في لوحة التحكم
+    if (rawNumber == null || rawNumber.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'رقم الخدمة غير متوفر حالياً، يرجى المحاولة لاحقاً',
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: AppColors.error,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // تنظيف وتنسيق الرقم بالصيغة القياسية (أرقام فقط بدون رموز أو مسافات)
+    String cleanNumber = rawNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanNumber.startsWith('00')) {
+      cleanNumber = cleanNumber.substring(2);
+    }
+    // إذا كان الرقم محلياً باليمن (9 أرقام يبدأ بـ 7)، إضافة مفتاح الدولة الدولي 967
+    if (cleanNumber.length == 9 && cleanNumber.startsWith('7')) {
+      cleanNumber = '967$cleanNumber';
+    }
+
+    // بناء نص الرسالة القياسي
+    final String messageText = order != null
+        ? _buildOrderMessage(order)
+        : 'السلام عليكم، أود إرسال إشعار حوالة مباشرة باسم: صبري العبد ناصر الربيزي بخصوص الطلب.';
+
+    final String encodedText = Uri.encodeComponent(messageText);
+
+    // الروابط القياسية (تطبيق واتساب المباشر، ورابط wa.me، ورابط الويب)
+    final Uri appUri = Uri.parse("whatsapp://send?phone=$cleanNumber&text=$encodedText");
+    final Uri waMeUri = Uri.parse("https://wa.me/$cleanNumber?text=$encodedText");
+    final Uri apiWhatsappUri = Uri.parse("https://api.whatsapp.com/send?phone=$cleanNumber&text=$encodedText");
+
+    bool launched = false;
+
+    // 1. محاولة فتح تطبيق واتساب مباشرة إذا كان مثبتاً على الجهاز
+    try {
+      if (await launchUrl(appUri, mode: LaunchMode.externalNonBrowserApplication)) {
+        launched = true;
+      }
+    } catch (_) {}
+
+    // 2. إذا لم يكن تطبيق واتساب مثبتاً (مثل المحاكي)، فتح الرابط القياسي https://wa.me
+    if (!launched) {
+      try {
+        if (await launchUrl(waMeUri, mode: LaunchMode.externalApplication)) {
+          launched = true;
+        }
+      } catch (_) {}
+    }
+
+    // 3. فتح الرابط عبر متصفح الجهاز كخيار احتياطي
+    if (!launched) {
+      try {
+        if (await launchUrl(waMeUri, mode: LaunchMode.platformDefault)) {
+          launched = true;
+        }
+      } catch (_) {}
+    }
+
+    // 4. محاولة أخيرة عبر api.whatsapp.com
+    if (!launched) {
+      try {
+        if (await launchUrl(apiWhatsappUri, mode: LaunchMode.platformDefault)) {
+          launched = true;
+        }
+      } catch (_) {}
+    }
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر فتح واتساب، يرجى التأكد من توفر تطبيق واتساب أو متصفح على جهازك'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  String _buildOrderMessage(Order order) {
     final itemsList = order.items
         .map((e) =>
             '  • ${e.product.name} × ${e.quantity} (${e.totalPrice.toStringAsFixed(0)} ${e.product.currencySymbol})')
         .join('\n');
 
-    final String messageText = '''
-📦 *طلب جديد - متجرنا الإلكتروني*
+    final recipientName = 'صبري العبد ناصر الربيزي';
+
+    return '''
+📦 *طلب جديد - متجر بركة عدن (إرسال حوالة مباشرة)*
 ----------------------------------
 🔢 *رقم الطلب:* ${order.orderNumber}
 🏷️ *نوع الطلب:* ${order.orderType}
@@ -396,17 +575,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 🛒 *قائمة المنتجات:*
 $itemsList
 ----------------------------------
-📄 *ملاحظة:* تم تسجيل هذا الطلب بنجاح في لوحة التحكم، يرجى إرفاق صورة/إشعار التحويل هنا لتأكيد الاعتماد.
+📄 *بيانات التحويل:*
+• التحويل باسم المستلم: *$recipientName*
+يرجى إرسال صورة أو إشعار التحويل هنا لتأكيد الاعتماد والبدء في التجهيز.
 ''';
-
-    final Uri whatsappUri = Uri.parse(
-        "https://wa.me/$adminPhone?text=${Uri.encodeComponent(messageText)}");
-
-    try {
-      if (await canLaunchUrl(whatsappUri)) {
-        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {}
   }
 
   Future<void> _confirmOrder() async {
@@ -435,7 +607,11 @@ $itemsList
 
     setState(() => _isProcessing = true);
 
-    String orderType = 'طلب شراء عادي';
+    // =========================================================================
+    // [تعليق الأكواد القديمة المرتبطة بالمحافظ الرقمية]:
+    // =========================================================================
+    /*
+    // الكود القديم الملغى:
     if (_paymentMethod == 'محفظة أم فلوس') {
       orderType = 'حوالة - محفظة أم فلوس';
     } else if (_paymentMethod == 'محفظة القطيبي') {
@@ -445,6 +621,12 @@ $itemsList
     } else {
       orderType = 'الدفع عند الاستلام';
     }
+    */
+
+    // الكود الجديد المعتمد:
+    final String orderType = _paymentMethod == 'إرسال حوالة مباشرة'
+        ? 'إرسال حوالة مباشرة'
+        : 'الدفع عند الاستلام';
 
     final cart = ref.read(cartProvider);
     final order = await ref.read(ordersProvider.notifier).createOrder(
@@ -455,9 +637,9 @@ $itemsList
         );
 
     if (order != null && mounted) {
-      if (_paymentMethod != 'الدفع عند الاستلام') {
-        // إرسال تفاصيل الحوالة والطلب آلياً للواتساب واللوحة
-        await _launchWhatsApp(order);
+      if (_paymentMethod == 'إرسال حوالة مباشرة') {
+        // [تطبيق الإجراء الجديد]: توجيه المستخدم مباشرة لمحادثة الواتساب باستخدام رقم لوحة التحكم
+        await _launchDirectWhatsApp(order: order);
       }
 
       setState(() => _isProcessing = false);
@@ -553,7 +735,7 @@ $itemsList
                         ),
                       ),
                       if (isSelected)
-                        const Icon(
+                        Icon(
                           Icons.check_circle,
                           color: AppColors.primary,
                         ),
@@ -576,7 +758,26 @@ $itemsList
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
+            // زر استخدام الموقع الحالي (GPS) كعنوان توصيل
+            OutlinedButton.icon(
+              onPressed: () => _useCurrentLocationAsAddress(),
+              icon: const Icon(Icons.my_location, size: 20),
+              label: const Text('استخدام موقعي الحالي (GPS)'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // =====================================================
+            // تقدير التوصيل: مسافة البائع من المشتري + التكلفة والزمن
+            // (ربط موقع البائع وموقع المشتري في صفحة إتمام الطلب)
+            // =====================================================
+            _DeliveryEstimateCard(address: _selectedAddress),
+            const SizedBox(height: 20),
             // طريقة الدفع UI/UX التفاعلية
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -595,7 +796,7 @@ $itemsList
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
+                  child: Text(
                     'خيارات الدفع المباشر',
                     style: TextStyle(
                       fontSize: 12,
@@ -616,7 +817,36 @@ $itemsList
               final IconData? iconData = opt['icon'];
 
               return GestureDetector(
-                onTap: () => setState(() => _paymentMethod = id),
+                onTap: () {
+                  // =========================================================================
+                  // [تعديل 1: أزرار المحافظ الرقمية ("محفظة أم فلوس" و "محفظة بنك القطيبي")]
+                  // إلغاء وتعليق جميع الأحداث والإجراءات البرمجية السابقة لهذين الزرين
+                  // =========================================================================
+                  /*
+                  // الكود السابق الملغى:
+                  setState(() => _paymentMethod = id);
+                  */
+
+                  if (id == 'محفظة أم فلوس' || id == 'محفظة بنك القطيبي') {
+                    // إظهار رسالة تنبيه بالنص المطلوب حصراً: "ستتوفر هذه الخدمة قريباً"
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'ستتوفر هذه الخدمة قريباً',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        backgroundColor: Colors.black87,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return; // إيقاف الحدث وعدم تغيير وسيلة الدفع
+                  }
+
+                  // تطبيق الإجراء لباقي وسائل الدفع
+                  setState(() => _paymentMethod = id);
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.only(bottom: 12),
@@ -749,41 +979,97 @@ $itemsList
               );
             }),
 
-            // صندوق معلومات المحفظة المحددة والتحويل
+            // صندوق معلومات المحفظة المحددة والتحويل وزر الواتساب المباشر
             if (selectedOption['accountInfo'] != null) ...[
               Container(
                 margin: const EdgeInsets.only(top: 4, bottom: 16),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
+                  color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.amber.shade300),
+                  border: Border.all(color: Colors.blue.shade300),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, color: Colors.amber.shade900),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            selectedOption['accountInfo']!,
+                    Row(
+                      children: [
+                        Icon(Icons.account_balance, color: Colors.blue.shade900),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'بيانات استلام الحوالة المصرفية',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.amber.shade900,
-                              fontSize: 13,
+                              color: Colors.blue.shade900,
+                              fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_pin, color: Colors.blue.shade800, size: 22),
+                          const SizedBox(width: 8),
                           const Text(
-                            'سيتم توجيهك مباشرة للواتساب لإرسال الإشعار وتثبيت الطلب في لوحة التحكم.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.black87,
+                            'التحويل باسم: ',
+                            style: TextStyle(fontSize: 13, color: Colors.black87),
+                          ),
+                          const Expanded(
+                            child: Text(
+                              'صبري العبد ناصر الربيزي',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0D47A1),
+                              ),
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'سيتم نقلك مباشرة إلى محادثة الواتساب الخاصة بحساب المتجر المعتمد لإرسال إشعار وسند الحوالة.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // =========================================================================
+                    // [تعديل 2]: زر "إرسال حوالة مباشرة" لفتح محادثة الواتساب مباشرة
+                    // =========================================================================
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 1,
+                        ),
+                        icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                        label: const Text(
+                          'إرسال حوالة مباشرة عبر واتساب',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: () => _launchDirectWhatsApp(),
                       ),
                     ),
                   ],
@@ -906,7 +1192,7 @@ class OrderSuccessScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'الإجمالي: ${order.total.toStringAsFixed(0)} ${order.currencySymbol}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -1095,7 +1381,7 @@ class _OrderCard extends StatelessWidget {
                 ),
                 Text(
                   '${order.total.toStringAsFixed(0)} ${order.currencySymbol}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
                     fontSize: 16,
@@ -1216,7 +1502,7 @@ class OrderDetailsScreen extends StatelessWidget {
                       ),
                       Text(
                         '${item.totalPrice.toStringAsFixed(0)} ${item.product.currencySymbol}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
@@ -1301,7 +1587,7 @@ class OrderDetailsScreen extends StatelessWidget {
                         ),
                         child: Text(
                           order.orderType,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
                             fontSize: 13,
@@ -1459,6 +1745,192 @@ class OrderDetailsScreen extends StatelessWidget {
           ],
         );
       }),
+    );
+  }
+}
+
+// ============================================
+// [������ ��������]: ����� ����� ������� �� ���� ����� �����
+// ���� ������� ��� ���� ������ (���� ���� ��� - �����)
+// ����� ������� ������ (����� ����� �� GPS)� ������
+// ����� ������� ���� ���� ����� ����� �����.
+// ============================================
+class _DeliveryEstimateCard extends ConsumerWidget {
+  final Address? address;
+
+  const _DeliveryEstimateCard({this.address});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cart = ref.watch(cartProvider);
+
+    // موقع البائع: من أول منتج في السلة (كل المنتجات افتراضياً من عدن)
+    final seller = cart.items.isNotEmpty ? cart.items.first.product : null;
+    final sellerLat = seller?.sellerLatitude ?? AppLocationDefaults.defaultLatitude;
+    final sellerLng = seller?.sellerLongitude ?? AppLocationDefaults.defaultLongitude;
+    final sellerCity = seller?.sellerCity ?? AppLocationDefaults.defaultCity;
+
+    // موقع المشتري: العنوان المحدد (GPS أو مدينة مختارة) أو الموقع الافتراضي
+    final buyerLat = address?.latitude ?? AppLocationDefaults.defaultLatitude;
+    final buyerLng = address?.longitude ?? AppLocationDefaults.defaultLongitude;
+    final buyerCity = address?.city ?? AppLocationDefaults.defaultCity;
+
+    // حساب المسافة وتقدير التكلفة والزمن
+    final distanceKm = LocationService.distanceKm(sellerLat, sellerLng, buyerLat, buyerLng);
+    final quote = LocationService.estimateDelivery(
+      distanceKm: distanceKm,
+      subtotal: cart.subtotal,
+      sellerCity: sellerCity,
+      buyerCity: buyerCity,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // رأس البطاقة
+          Row(
+            children: [
+              Icon(Icons.local_shipping_outlined,
+                  color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'تقدير التوصيل',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (address?.isGpsLocation ?? false)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'GPS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // مسار البائع ? المشتري
+          Row(
+            children: [
+              const Icon(Icons.storefront, size: 16, color: AppColors.textSecondaryLight),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'البائع: ${seller?.sellerName ?? 'متجر بركة عدن'} - $sellerCity',
+                  style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.home_outlined, size: 16, color: AppColors.textSecondaryLight),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'المشتري: ${address?.fullAddress ?? 'عدن - كريتر'}',
+                  style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+
+          // المسافة + التكلفة + الزمن المتوقع
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _EstimateItem(
+                icon: Icons.route_outlined,
+                label: 'المسافة',
+                value: formatDistance(distanceKm),
+              ),
+              Container(width: 1, height: 32, color: AppColors.borderLight),
+              _EstimateItem(
+                icon: Icons.payments_outlined,
+                label: 'تكلفة التوصيل',
+                value: quote.fee == 0
+                    ? 'مجاناً'
+                    : '${quote.fee.toStringAsFixed(0)} ${cart.currencySymbol}',
+                valueColor: quote.fee == 0 ? AppColors.success : null,
+              ),
+              Container(width: 1, height: 32, color: AppColors.borderLight),
+              _EstimateItem(
+                icon: Icons.schedule_outlined,
+                label: 'الزمن المتوقع',
+                value: quote.etaLabel,
+                compact: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// عنصر فرعي داخل بطاقة تقدير التوصيل (أيقونة + تسمية + قيمة)
+class _EstimateItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool compact;
+
+  const _EstimateItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: AppColors.primary),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondaryLight),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: TextStyle(
+              fontSize: compact ? 10.5 : 12.5,
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? AppColors.textPrimaryLight,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

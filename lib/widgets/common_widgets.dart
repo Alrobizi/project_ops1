@@ -36,6 +36,8 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
     return SizedBox(
       width: width ?? double.infinity,
       height: height,
@@ -43,7 +45,7 @@ class CustomButton extends StatelessWidget {
           ? OutlinedButton(
               onPressed: isLoading ? null : onPressed,
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
+                side: BorderSide(color: primaryColor),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -53,7 +55,7 @@ class CustomButton extends StatelessWidget {
           : ElevatedButton(
               onPressed: isLoading ? null : onPressed,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -173,7 +175,7 @@ class CustomTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
@@ -313,10 +315,10 @@ class ProductCard extends ConsumerWidget {
                       children: [
                         Text(
                           '${product.price.toStringAsFixed(0)} ${product.currencySymbol}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                            color: Theme.of(context).primaryColor,
                           ),
                         ),
                         if (product.oldPrice != null) ...[
@@ -399,6 +401,8 @@ class CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -412,11 +416,11 @@ class CategoryChip extends StatelessWidget {
                   width: size,
                   height: size,
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.cardLight,
+                    color: isSelected ? primaryColor : AppColors.cardLight,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -434,20 +438,20 @@ class CategoryChip extends StatelessWidget {
                             placeholder: (context, url) => Icon(
                               _getIcon(category.icon),
                               color:
-                                  isSelected ? Colors.white : AppColors.primary,
+                                  isSelected ? Colors.white : primaryColor,
                               size: 28,
                             ),
                             errorWidget: (context, url, error) => Icon(
                               _getIcon(category.icon),
                               color:
-                                  isSelected ? Colors.white : AppColors.primary,
+                                  isSelected ? Colors.white : primaryColor,
                               size: 28,
                             ),
                           ),
                         )
                       : Icon(
                           _getIcon(category.icon),
-                          color: isSelected ? Colors.white : AppColors.primary,
+                          color: isSelected ? Colors.white : primaryColor,
                           size: 28,
                         ),
                 ),
@@ -463,7 +467,7 @@ class CategoryChip extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                           ),
                         ],
@@ -482,7 +486,7 @@ class CategoryChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppColors.primary : AppColors.textPrimaryLight,
+                color: isSelected ? primaryColor : AppColors.textPrimaryLight,
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -533,6 +537,8 @@ class MarketingSectionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -542,15 +548,15 @@ class MarketingSectionChip extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.primary.withOpacity(0.1),
-              AppColors.primary.withOpacity(0.05),
+              primaryColor.withValues(alpha: 0.1),
+              primaryColor.withValues(alpha: 0.05),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.2),
+            color: primaryColor.withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -559,7 +565,7 @@ class MarketingSectionChip extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: section.image != null && section.image!.isNotEmpty
@@ -573,19 +579,19 @@ class MarketingSectionChip extends StatelessWidget {
                         memCacheWidth: 300,
                         placeholder: (context, url) => Icon(
                           _getIcon(section.icon),
-                          color: AppColors.primary,
+                          color: primaryColor,
                           size: 22,
                         ),
                         errorWidget: (context, url, error) => Icon(
                           _getIcon(section.icon),
-                          color: AppColors.primary,
+                          color: primaryColor,
                           size: 22,
                         ),
                       ),
                     )
                   : Icon(
                       _getIcon(section.icon),
-                      color: AppColors.primary,
+                      color: primaryColor,
                       size: 22,
                     ),
             ),
@@ -646,6 +652,7 @@ class QuantitySelector extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildButton(
+            context: context,
             icon: Icons.remove,
             onPressed: quantity > 1 ? () => onChanged(quantity - 1) : null,
           ),
@@ -661,6 +668,7 @@ class QuantitySelector extends StatelessWidget {
             ),
           ),
           _buildButton(
+            context: context,
             icon: Icons.add,
             onPressed: quantity < maxQuantity ? () => onChanged(quantity + 1) : null,
           ),
@@ -670,6 +678,7 @@ class QuantitySelector extends StatelessWidget {
   }
 
   Widget _buildButton({
+    required BuildContext context,
     required IconData icon,
     VoidCallback? onPressed,
   }) {
@@ -683,7 +692,7 @@ class QuantitySelector extends StatelessWidget {
           child: Icon(
             icon,
             size: 20,
-            color: onPressed != null ? AppColors.primary : Colors.grey,
+            color: onPressed != null ? Theme.of(context).primaryColor : Colors.grey,
           ),
         ),
       ),
@@ -760,6 +769,8 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
     return Center(
       child: SingleChildScrollView(
         child: Padding(
@@ -772,13 +783,13 @@ class EmptyState extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   icon,
                   size: 60,
-                  color: AppColors.primary,
+                  color: primaryColor,
                 ),
               ),
               const SizedBox(height: 24),

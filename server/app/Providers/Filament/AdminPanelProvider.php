@@ -2,9 +2,11 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\ModernStatsOverviewWidget;
+use App\Filament\Widgets\ModernSalesAreaChartWidget;
+use App\Filament\Widgets\OrderStatusDonutWidget;
+use App\Filament\Widgets\TopSellingProductsWidget;
 use App\Filament\Widgets\LatestOrdersWidget;
-use App\Filament\Widgets\SalesChartWidget;
-use App\Filament\Widgets\StatsOverviewWidget;
 use Filament\Enums\ThemeMode;
 use Filament\FontProviders\GoogleFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -29,24 +31,31 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('filament')
             ->login()
-            ->brandName('متجرنا')
+            ->brandName('بركة عدن')
             ->defaultThemeMode(ThemeMode::Light)
             ->font('Cairo', provider: GoogleFontProvider::class)
             ->colors([
-                'primary' => Color::hex('#7C3AED'),
-                'info' => Color::hex('#3B82F6'),
+                'primary' => Color::hex('#6D5DF6'),
+                'info'    => Color::hex('#3B82F6'),
+                'success' => Color::hex('#10B981'),
+                'warning' => Color::hex('#F59E0B'),
+                'danger'  => Color::hex('#EF4444'),
             ])
+            // Custom theme (compiled with Tailwind v3 CLI)
+            ->theme(asset('css/filament/admin/theme.css'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                \App\Filament\Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            // Only register the modern widgets explicitly — discoverWidgets is disabled
             ->widgets([
-                StatsOverviewWidget::class,
-                SalesChartWidget::class,
+                ModernStatsOverviewWidget::class,
+                ModernSalesAreaChartWidget::class,
+                OrderStatusDonutWidget::class,
+                TopSellingProductsWidget::class,
                 LatestOrdersWidget::class,
             ])
             ->middleware([

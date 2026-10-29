@@ -25,7 +25,7 @@ class NotificationsScreen extends ConsumerWidget {
           if (notificationsState.unreadCount > 0)
             TextButton(
               onPressed: () => notifier.markAllAsRead(),
-              child: const Text(
+              child: Text(
                 'تعليم الكل كمقروء',
                 style: TextStyle(fontSize: 12, color: AppColors.primary),
               ),

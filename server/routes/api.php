@@ -26,6 +26,7 @@ Route::get('/categories/{category}', [CategoryController::class, 'show']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/banners', [BannerController::class, 'index']);
+Route::get('/settings', [AdminController::class, 'publicSettings']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -57,8 +58,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // ============================================
     Route::middleware('admin')->group(function () {
 
-    // لوحة التحكم - الإحصائيات (متاحة لأي أدمن)
+    // لوحة التحكم - الإحصائيات وإدارة الطلبات (متاحة لأي أدمن)
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
+    Route::get('/admin/orders', [AdminController::class, 'orders']);
+    Route::patch('/admin/orders/{id}/status', [AdminController::class, 'updateOrderStatus']);
 
     // التقارير (صلاحية: reports)
     Route::middleware('permission:reports')->group(function () {

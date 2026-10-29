@@ -30,8 +30,8 @@ class ProfileScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, Color(0xFF5B21B6)],
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryDark],
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                 ),
@@ -45,7 +45,7 @@ class ProfileScreen extends ConsumerWidget {
                     backgroundColor: Colors.white,
                     child: Text(
                       user?.name.substring(0, 1) ?? 'أ',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -111,6 +111,11 @@ class ProfileScreen extends ConsumerWidget {
             _MenuSection(
               title: 'الإعدادات',
               items: [
+                _MenuItem(
+                  icon: Icons.palette_outlined,
+                  title: 'لون التطبيق (المفضل)',
+                  onTap: () => context.push('/theme-color'),
+                ),
                 _MenuItem(
                   icon: Icons.notifications_outlined,
                   title: 'الإشعارات',
@@ -188,7 +193,9 @@ class ProfileScreen extends ConsumerWidget {
 
                 if (confirmed == true && context.mounted) {
                   await ref.read(authProvider.notifier).logout();
-                  context.go('/login');
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
                 }
               },
             ),
@@ -352,7 +359,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: AppColors.primary.withOpacity(0.1),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person,
                       size: 50,
                       color: AppColors.primary,
@@ -363,7 +370,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),

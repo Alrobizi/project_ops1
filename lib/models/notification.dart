@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../core/theme/app_colors.dart';
 
 class AppNotification {
   final String id;
@@ -83,7 +84,7 @@ class AppNotification {
       case 'order_preparing':
         return const Color(0xFF8B5CF6); // purple
       default:
-        return const Color(0xFF7C3AED); // primary
+        return AppColors.primary; // primary
     }
   }
 

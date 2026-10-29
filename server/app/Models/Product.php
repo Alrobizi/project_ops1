@@ -31,6 +31,12 @@ class Product extends Model
         'sizes',
         'is_featured',
         'is_active',
+        // [الموقع الجغرافي] موقع البائع (الافتراضي: متجر بركة عدن - كريتر)
+        'seller_name',
+        'seller_governorate',
+        'seller_city',
+        'seller_latitude',
+        'seller_longitude',
     ];
 
     protected function casts(): array
@@ -43,6 +49,8 @@ class Product extends Model
             'sizes' => 'array',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'seller_latitude' => 'double',
+            'seller_longitude' => 'double',
         ];
     }
 

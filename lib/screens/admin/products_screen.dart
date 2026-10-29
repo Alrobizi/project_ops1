@@ -49,9 +49,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             // رأس الشاشة
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary, Color(0xFF5B21B6)],
+                  colors: [AppColors.primary, AppColors.primaryDark],
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                 ),
@@ -181,7 +181,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
 
   Widget _buildBody(BuildContext context, AdminProductsState state) {
     if (state.isLoading && state.products.isEmpty) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
@@ -659,7 +659,7 @@ class _ProductCard extends StatelessWidget {
                       width: 64,
                       height: 64,
                       color: AppColors.primary.withOpacity(0.1),
-                      child: const Icon(Icons.image_outlined,
+                      child: Icon(Icons.image_outlined,
                           color: AppColors.primary),
                     ),
                   )
@@ -667,7 +667,7 @@ class _ProductCard extends StatelessWidget {
                     width: 64,
                     height: 64,
                     color: AppColors.primary.withOpacity(0.1),
-                    child: const Icon(Icons.inventory_2_outlined,
+                    child: Icon(Icons.inventory_2_outlined,
                         color: AppColors.primary),
                   ),
           ),
@@ -700,7 +700,7 @@ class _ProductCard extends StatelessWidget {
                   children: [
                     Text(
                       '${product.price.toStringAsFixed(0)} ${product.currencySymbol}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -750,7 +750,7 @@ class _ProductCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined,
+                    icon: Icon(Icons.edit_outlined,
                         color: AppColors.primary, size: 22),
                     tooltip: 'تعديل',
                     onPressed: () => onEdit(product),

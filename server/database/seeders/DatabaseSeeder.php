@@ -13,47 +13,65 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * [إصلاح] بذرة قاعدة البيانات أصبحت متوافقة مع التشغيل المتكرر (Idempotent):
+ * - استخدام firstOrCreate بدلاً من create المباشر حتى لا يتوقف الـ Seeder
+ *   بخطأ UNIQUE constraint عند وجود بيانات مسبقة في قاعدة البيانات.
+ * - لا يتم حذف أو تعديل أي بيانات موجودة، فقط إضافة ما هو مفقود.
+ * - الموقع الافتراضي للبيانات التجريبية: اليمن - عدن - كريتر (بدون مدن سعودية).
+ */
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
     public function run(): void
     {
-        $admin = User::create([
-            'name' => 'مدير المتجر',
-            'email' => 'admin@store.test',
-            'phone' => '700000001',
-            'role' => 'admin',
-            // الأدمن الرئيسي يُمنح كل الأقسام صراحةً (الافتراضي بدون صلاحيات)
-            'admin_permissions' => User::ADMIN_PERMISSIONS,
-            'password' => Hash::make('password'),
-        ]);
+        // ============================================================
+        // المستخدمون (البحث بالبريد الإلكتروني الفريد - إنشاء فقط عند عدم الوجود)
+        // ============================================================
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@store.test'],
+            [
+                'name' => 'مدير المتجر',
+                'phone' => '700000001',
+                'role' => 'admin',
+                // الأدمن الرئيسي يُمنح كل الأقسام صراحةً (الافتراضي بدون صلاحيات)
+                'admin_permissions' => User::ADMIN_PERMISSIONS,
+                'password' => Hash::make('password'),
+            ]
+        );
 
         // أدمن بصلاحية "المنتجات" فقط — يرى لوحة التحكم في التطبيق ويدير المنتجات والتصنيفات
-        User::create([
-            'name' => 'مسؤول المنتجات',
-            'email' => 'manager@store.test',
-            'phone' => '700000010',
-            'role' => 'admin',
-            'admin_permissions' => ['products'],
-            'password' => Hash::make('password'),
-        ]);
+        User::firstOrCreate(
+            ['email' => 'manager@store.test'],
+            [
+                'name' => 'مسؤول المنتجات',
+                'phone' => '700000010',
+                'role' => 'admin',
+                'admin_permissions' => ['products'],
+                'password' => Hash::make('password'),
+            ]
+        );
 
-        $customer = User::create([
-            'name' => 'أحمد محمد',
-            'email' => 'test@test.com',
-            'phone' => '700000002',
-            'role' => 'customer',
-            'password' => Hash::make('123456'),
-        ]);
+        $customer = User::firstOrCreate(
+            ['email' => 'test@test.com'],
+            [
+                'name' => 'أحمد محمد',
+                'phone' => '700000002',
+                'role' => 'customer',
+                'password' => Hash::make('123456'),
+            ]
+        );
 
-        User::create([
-            'name' => 'سارة القحطاني',
-            'email' => 'sara@test.com',
-            'phone' => '700000003',
-            'role' => 'customer',
-            'password' => Hash::make('123456'),
-        ]);
+        User::firstOrCreate(
+            ['email' => 'sara@test.com'],
+            [
+                'name' => 'سارة القحطاني',
+                'phone' => '700000003',
+                'role' => 'customer',
+                'password' => Hash::make('123456'),
+            ]
+        );
 
         // إنشاء التصنيفات النسائية
         $this->call(WomenCategoriesSeeder::class);
@@ -90,66 +108,89 @@ class DatabaseSeeder extends Seeder
             [$jacket, 'جاكيت جلد نسائي', 'جاكيت جلد طبيعي بتصميم عصري أنيق. مثالي للإطلالات الكاجوال والرسمية.', 449, 549, 'https://images.unsplash.com/photo-1551232864-3e3e3e3e3e3e?w=500', 7, 4.8, 54, ['بني', 'أسود'], ['S', 'M', 'L', 'XL'], false],
         ];
 
+        // ============================================================
+        // المنتجات (البحث بالتصنيف + الاسم - إنشاء فقط عند عدم الوجود)
+        // ============================================================
         $createdProducts = [];
         foreach ($products as [$category, $name, $desc, $price, $oldPrice, $image, $stock, $rating, $reviews, $colors, $sizes, $featured]) {
-            $createdProducts[] = Product::create([
-                'category_id' => $category->id,
-                'name' => $name,
-                'description' => $desc,
-                'price' => $price,
-                'old_price' => $oldPrice,
-                'image' => $image,
-                'stock' => $stock,
-                'rating' => $rating,
-                'reviews_count' => $reviews,
-                'colors' => $colors,
-                'sizes' => $sizes,
-                'is_featured' => $featured,
-                'is_active' => true,
-            ]);
+            if (! $category) {
+                continue; // التصنيف غير موجود - تخطي المنتج بأمان
+            }
+
+            $createdProducts[] = Product::firstOrCreate(
+                ['category_id' => $category->id, 'name' => $name],
+                [
+                    'description' => $desc,
+                    'price' => $price,
+                    'old_price' => $oldPrice,
+                    'image' => $image,
+                    'stock' => $stock,
+                    'rating' => $rating,
+                    'reviews_count' => $reviews,
+                    'colors' => $colors,
+                    'sizes' => $sizes,
+                    'is_featured' => $featured,
+                    'is_active' => true,
+                ]
+            );
         }
 
-        Banner::create(['title' => 'عروض نهاية الموسم', 'image' => 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1200', 'link' => '/products?featured=1', 'sort_order' => 1]);
-        Banner::create(['title' => 'تشكيلة الفساتين الجديدة', 'image' => 'https://images.unsplash.com/photo-1566174049881-81001826583c?w=1200', 'link' => '/products?category_id=1', 'sort_order' => 2]);
-        Banner::create(['title' => 'عبايات و جلابيات', 'image' => 'https://images.unsplash.com/photo-1583391733956-375ef4cefee3?w=1200', 'link' => '/products?category_id=2', 'sort_order' => 3]);
+        // ============================================================
+        // البانرات (البحث بالعنوان - إنشاء فقط عند عدم الوجود)
+        // ============================================================
+        Banner::firstOrCreate(['title' => 'عروض نهاية الموسم'], ['image' => 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1200', 'link' => '/products?featured=1', 'sort_order' => 1]);
+        Banner::firstOrCreate(['title' => 'تشكيلة الفساتين الجديدة'], ['image' => 'https://images.unsplash.com/photo-1566174049881-81001826583c?w=1200', 'link' => '/products?category_id=1', 'sort_order' => 2]);
+        Banner::firstOrCreate(['title' => 'عبايات و جلابيات'], ['image' => 'https://images.unsplash.com/photo-1583391733956-375ef4cefee3?w=1200', 'link' => '/products?category_id=2', 'sort_order' => 3]);
 
-        $address = Address::create([
-            'user_id' => $customer->id,
-            'city' => 'الرياض',
-            'district' => 'حي النرجس',
-            'street' => 'شارع الأمير محمد بن سلمان، مبنى 12',
-            'phone' => '700000002',
-            'is_default' => true,
-        ]);
+        // ============================================================
+        // العنوان التجريبي (الموقع الافتراضي: اليمن - عدن - كريتر)
+        // ============================================================
+        $address = Address::firstOrCreate(
+            ['user_id' => $customer->id, 'street' => 'شارع القاسم، مبنى 12'],
+            [
+                'governorate' => 'عدن',
+                'city' => 'كريتر',
+                'district' => 'حي الجمهورية',
+                'phone' => '700000002',
+                'is_default' => true,
+                'latitude' => 12.7917,
+                'longitude' => 45.0067,
+            ]
+        );
 
-        $statuses = ['delivered', 'shipped', 'processing', 'pending'];
-        foreach ($statuses as $index => $status) {
-            $orderProducts = array_slice($createdProducts, $index, 2);
-            $subtotal = collect($orderProducts)->sum(fn ($p) => $p->price * 2);
-            $shipping = $subtotal >= 200 ? 0 : 25;
+        // ============================================================
+        // الطلبات التجريبية (تُنشأ مرة واحدة فقط لكل عميل عند عدم وجود طلبات)
+        // ============================================================
+        if ($customer->orders()->doesntExist() && count($createdProducts) >= 4) {
+            $statuses = ['delivered', 'shipped', 'processing', 'pending'];
+            foreach ($statuses as $index => $status) {
+                $orderProducts = array_slice($createdProducts, $index, 2);
+                $subtotal = collect($orderProducts)->sum(fn ($p) => $p->price * 2);
+                $shipping = $subtotal >= 200 ? 0 : 25;
 
-            $order = Order::create([
-                'order_number' => Order::generateOrderNumber(),
-                'user_id' => $customer->id,
-                'address_id' => $address->id,
-                'subtotal' => $subtotal,
-                'shipping' => $shipping,
-                'total' => $subtotal + $shipping,
-                'status' => $status,
-                'payment_method' => 'cod',
-                'created_at' => now()->subDays(3 - $index),
-            ]);
-
-            foreach ($orderProducts as $product) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
-                    'price' => $product->price,
-                    'quantity' => 2,
-                    'color' => $product->colors[0] ?? null,
-                    'size' => $product->sizes[0] ?? null,
+                $order = Order::create([
+                    'order_number' => Order::generateOrderNumber(),
+                    'user_id' => $customer->id,
+                    'address_id' => $address->id,
+                    'subtotal' => $subtotal,
+                    'shipping' => $shipping,
+                    'total' => $subtotal + $shipping,
+                    'status' => $status,
+                    'payment_method' => 'cod',
+                    'created_at' => now()->subDays(3 - $index),
                 ]);
+
+                foreach ($orderProducts as $product) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'price' => $product->price,
+                        'quantity' => 2,
+                        'color' => $product->colors[0] ?? null,
+                        'size' => $product->sizes[0] ?? null,
+                    ]);
+                }
             }
         }
     }

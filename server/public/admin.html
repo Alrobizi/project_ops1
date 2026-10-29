@@ -1,0 +1,3313 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بركة عدن | لوحة تحكم المتجر العصرية</title>
+  <!-- Google Fonts: Cairo & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'sans-serif'],
+            mono: ['Outfit', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#EEF0FD',
+              100: '#DFE2FB',
+              200: '#C2C6F7',
+              300: '#99A1F2',
+              400: '#7B77EC',
+              500: '#6D5DF6', // Primary Brand Color
+              600: '#5A47E5',
+              700: '#4835CB',
+              800: '#3A2CA6',
+              900: '#2E2483',
+            },
+            surface: {
+              light: '#F6F7FB',
+              card: '#FFFFFF',
+              dark: '#0B0F19',
+              darkCard: '#131B2E',
+              darkBorder: '#1F293D'
+            }
+          },
+          boxShadow: {
+            'soft': '0 4px 20px -2px rgba(109, 93, 246, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03)',
+            'soft-hover': '0 12px 28px -4px rgba(109, 93, 246, 0.12), 0 4px 10px -2px rgba(0, 0, 0, 0.05)',
+            'glow': '0 0 24px rgba(109, 93, 246, 0.35)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone for in-browser JSX parsing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    body {
+      background-color: #F6F7FB;
+      color: #1E293B;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .dark body {
+      background-color: #0B0F19;
+      color: #F1F5F9;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(109, 93, 246, 0.2);
+      border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(109, 93, 246, 0.4);
+    }
+
+    /* Smooth Pulse */
+    @keyframes gentlePulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.04);
+        opacity: 0.9;
+      }
+    }
+
+    .animate-gentle {
+      animation: gentlePulse 3s infinite ease-in-out;
+    }
+  </style>
+</head>
+
+<body class="antialiased selection:bg-brand-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // ==========================================
+    // Lucide Icon Helpers (Clean SVG Components)
+    // ==========================================
+    const Icon = ({ name, size = 18, className = "" }) => {
+      const icons = {
+        LayoutDashboard: <path d="M3 3h7v9H3zm11 0h7v5h-7zm0 9h7v9h-7zM3 16h7v5H3z" />,
+        Megaphone: <path d="m3 11 18-5v12L3 14v-3zm0 0a3 3 0 0 0 0 6M11.6 16.8a3 3 0 1 1-5.8-1.6" />,
+        Percent: <><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /><line x1="19" y1="5" x2="5" y2="19" /></>,
+        ShoppingCart: <><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></>,
+        FileText: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>,
+        Package: <><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></>,
+        Grid: <><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></>,
+        Settings: <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></>,
+        Users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+        Search: <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
+        Bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>,
+        Sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></>,
+        Moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
+        TrendingUp: <><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>,
+        TrendingDown: <><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></>,
+        ChevronDown: <polyline points="6 9 12 15 18 9" />,
+        ChevronLeft: <polyline points="15 18 9 12 15 6" />,
+        ChevronRight: <polyline points="9 18 15 12 9 6" />,
+        Filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />,
+        ExternalLink: <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></>,
+        Eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></>,
+        Store: <><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /></>,
+        Sparkles: <><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" /></>,
+        Menu: <><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="18" x2="20" y2="18" /></>,
+        X: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
+        Clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>,
+        CheckCircle2: <><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></>,
+        Truck: <><rect width="14" height="10" x="1" y="5" rx="1" /><polygon points="15 8 19 8 22 11 22 15 15 15 15 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></>,
+        AlertCircle: <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>,
+        RefreshCw: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></>,
+        ArrowUpRight: <><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></>,
+        BarChart3: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>,
+        Server: <><rect width="20" height="8" x="2" y="2" rx="2" ry="2" /><rect width="20" height="8" x="2" y="14" rx="2" ry="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></>,
+        Wifi: <><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M1.42 9a16 16 0 0 1 21.16 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><line x1="12" y1="20" x2="12.01" y2="20" /></>,
+        Key: <><circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6" /><path d="m15.5 7.5 3 3M18.5 4.5l3 3" /></>,
+        LogIn: <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></>,
+        LogOut: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>,
+        Check: <polyline points="20 6 9 17 4 12" />,
+        Plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
+        Edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>,
+        Trash2: <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>,
+        Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+        Mail: <><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></>,
+        Phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />,
+        Save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
+        Globe: <><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>,
+        Tag: <><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" /><circle cx="7" cy="7" r="1.5" /></>,
+        CreditCard: <><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></>,
+        ToggleRight: <><rect width="20" height="12" x="2" y="6" rx="6" /><circle cx="16" cy="12" r="3" fill="currentColor" /></>,
+        ToggleLeft: <><rect width="20" height="12" x="2" y="6" rx="6" /><circle cx="8" cy="12" r="3" fill="currentColor" /></>,
+        MapPin: <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>,
+      };
+
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          {icons[name] || <circle cx="12" cy="12" r="10" />}
+        </svg>
+      );
+    };
+
+    // ==========================================
+    // Barakat Aden API Client (Laravel Backend)
+    // ==========================================
+    const BarakatApi = {
+      getBaseUrl() {
+        return localStorage.getItem('barakat_api_url') || 'http://127.0.0.1:8009/api';
+      },
+      setBaseUrl(url) {
+        const clean = url.trim().replace(/\/+$/, '');
+        localStorage.setItem('barakat_api_url', clean);
+        return clean;
+      },
+      getToken() {
+        return localStorage.getItem('barakat_admin_token') || '';
+      },
+      setToken(token) {
+        if (token) localStorage.setItem('barakat_admin_token', token);
+        else localStorage.removeItem('barakat_admin_token');
+      },
+      async request(endpoint, options = {}) {
+        const baseUrl = this.getBaseUrl();
+        const token = this.getToken();
+        const headers = {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(options.headers || {})
+        };
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+        try {
+          const res = await fetch(`${baseUrl}${endpoint}`, {
+            ...options,
+            headers,
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const err = new Error(data.message || `خطأ ${res.status}: فشل الاستجابة`);
+            err.status = res.status;
+            err.data = data;
+            throw err;
+          }
+          return data;
+        } catch (err) {
+          clearTimeout(timeoutId);
+          if (err.name === 'AbortError') {
+            throw new Error('انتهت مهلة الاتصال بالخادم (تأكد من تشغيل السيرفر php artisan serve)');
+          }
+          throw err;
+        }
+      },
+      async login(email, password) {
+        const res = await this.request('/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        if (res.data?.token) {
+          this.setToken(res.data.token);
+          if (res.data.user) {
+            localStorage.setItem('barakat_admin_user', JSON.stringify(res.data.user));
+          }
+        }
+        return res;
+      },
+      async getDashboard() {
+        return this.request('/admin/dashboard');
+      },
+      async getOrders(status = 'all') {
+        const query = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+        return this.request(`/admin/orders${query}`);
+      },
+      async updateOrderStatus(id, status) {
+        return this.request(`/admin/orders/${id}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        });
+      },
+      async getProducts(params = {}) {
+        const q = new URLSearchParams(params).toString();
+        return this.request(`/admin/products${q ? `?${q}` : ''}`);
+      },
+      async storeProduct(data) {
+        return this.request('/admin/products', {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+      },
+      async updateProduct(id, data) {
+        return this.request(`/admin/products/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+      },
+      async deleteProduct(id) {
+        return this.request(`/admin/products/${id}`, {
+          method: 'DELETE'
+        });
+      },
+      async getCustomers() {
+        return this.request('/admin/customers');
+      },
+      async toggleCustomer(id) {
+        return this.request(`/admin/customers/${id}/toggle`, {
+          method: 'PATCH'
+        });
+      },
+      async getSettings() {
+        return this.request('/settings');
+      },
+      async updateSettings(data) {
+        return this.request('/admin/settings', {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+      },
+      async getCategories() {
+        return this.request('/admin/categories');
+      },
+      async getDiscounts() {
+        return this.request('/admin/discounts');
+      },
+      logout() {
+        this.setToken('');
+        localStorage.removeItem('barakat_admin_user');
+      }
+    };
+
+    // Helper to format API orders to dashboard format
+    const formatApiOrder = (apiOrder) => {
+      const statusLabels = {
+        pending: "في الانتظار",
+        processing: "قيد المعالجة",
+        shipped: "قيد الشحن",
+        delivered: "مكتمل",
+        cancelled: "ملغي"
+      };
+      return {
+        rawId: apiOrder.id,
+        id: apiOrder.order_number || `ORD-2026-${String(apiOrder.id).padStart(5, '0')}`,
+        customer: apiOrder.user?.name || "عميل المتجر",
+        email: apiOrder.user?.email || "customer@store.com",
+        phone: apiOrder.user?.phone || apiOrder.address?.phone || "غير محدد",
+        date: apiOrder.created_at ? new Date(apiOrder.created_at).toLocaleDateString('ar-YE', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "اليوم",
+        status: apiOrder.status || "pending",
+        statusLabel: statusLabels[apiOrder.status] || "في الانتظار",
+        total: parseFloat(apiOrder.total) || 0,
+        itemsCount: apiOrder.items ? apiOrder.items.length : 1,
+        paymentMethod: apiOrder.payment_method === 'cod' ? 'الدفع عند الاستلام' : (apiOrder.payment_method || 'محفظة بنكية'),
+        address: apiOrder.address?.address || apiOrder.address?.city || 'عدن',
+        items: apiOrder.items || []
+      };
+    };
+
+    // ==========================================
+    // Real-feel Arabic Data (Matching user store)
+    // ==========================================
+    const INITIAL_ORDERS = [
+      { id: "ORD-2026-00006", customer: "أحمد محمد", email: "ahmed@example.com", phone: "700000002", date: "منذ ساعتين", status: "processing", statusLabel: "قيد المعالجة", total: 5000.00, itemsCount: 4 },
+      { id: "ORD-2026-00005", customer: "أحمد محمد", email: "ahmed@example.com", phone: "700000002", date: "اليوم 11:30 ص", status: "processing", statusLabel: "قيد المعالجة", total: 10349.00, itemsCount: 8 },
+      { id: "ORD-2026-00004", customer: "أحمد محمد", email: "ahmed@example.com", phone: "700000002", date: "أمس 04:15 م", status: "processing", statusLabel: "قيد المعالجة", total: 871.00, itemsCount: 2 },
+      { id: "ORD-2026-00003", customer: "أحمد محمد", email: "ahmed@example.com", phone: "700000002", date: "06/10/2026", status: "shipped", statusLabel: "قيد الشحن", total: 860.00, itemsCount: 3 },
+      { id: "ORD-2026-00002", customer: "أحمد محمد", email: "ahmed@example.com", phone: "700000002", date: "05/10/2026", status: "shipped", statusLabel: "قيد الشحن", total: 673.00, itemsCount: 1 },
+      { id: "ORD-2026-00001", customer: "سارة القحطاني", email: "sara@test.com", phone: "700000003", date: "03/10/2026", status: "delivered", statusLabel: "مكتمل", total: 1500.00, itemsCount: 2 },
+    ];
+
+    const INITIAL_PRODUCTS = [
+      { id: 1, name: "فستان سهرة مطرز فاخر", category: "فساتين سهرة", price: 449, old_price: 599, stock: 15, is_active: true, rating: 4.8, reviews_count: 128, image: "https://images.unsplash.com/photo-1566174049881-81001826583c?w=500" },
+      { id: 2, name: "عباية مطرزة كلاسيكية", category: "عبايات سوداء كلاسيك", price: 299, old_price: 399, stock: 8, is_active: true, rating: 4.9, reviews_count: 89, image: "https://images.unsplash.com/photo-1583391733956-375ef4cefee3?w=500" },
+      { id: 3, name: "حجاب شيفون فاخر", category: "حجابات شيفون", price: 49, old_price: 79, stock: 50, is_active: true, rating: 4.7, reviews_count: 256, image: "https://images.unsplash.com/photo-1611042553365-9b101c1c0e3a?w=500" },
+      { id: 4, name: "فستان ماكسي محتشم", category: "فساتين سهرة", price: 359, old_price: null, stock: 20, is_active: true, rating: 4.5, reviews_count: 64, image: "https://images.unsplash.com/photo-1595778742750-9b8e3e3e3e3e?w=500" },
+      { id: 5, name: "بلوزة شيفون أنيقة", category: "بلوزات شيفون", price: 89, old_price: 129, stock: 30, is_active: true, rating: 4.3, reviews_count: 45, image: "https://images.unsplash.com/photo-1551803021-0ab9b8b3b3b3?w=500" },
+      { id: 6, name: "حقيبة يد جلدية فاخرة", category: "حقائب يد", price: 349, old_price: null, stock: 10, is_active: true, rating: 4.6, reviews_count: 78, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500" },
+      { id: 7, name: "حذاء كعب عالي أنيق", category: "كعب عالي", price: 259, old_price: 329, stock: 12, is_active: true, rating: 4.5, reviews_count: 92, image: "https://images.unsplash.com/photo-1543163529-1cf46c453b94?w=500" },
+      { id: 8, name: "عقد لؤلؤ فاخر", category: "عقود وسلاسل", price: 199, old_price: 259, stock: 15, is_active: true, rating: 4.8, reviews_count: 67, image: "https://images.unsplash.com/photo-1611652022233-7e7358d9c1c1?w=500" },
+      { id: 9, name: "طقم رياضي نسائي", category: "أطقم رياضية نسائية", price: 179, old_price: 229, stock: 25, is_active: true, rating: 4.6, reviews_count: 143, image: "https://images.unsplash.com/photo-1570285964451-4e0e2b7b3b3b?w=500" },
+      { id: 10, name: "بيجاما قطنية ناعمة", category: "بيجامات نسائية", price: 99, old_price: 129, stock: 40, is_active: true, rating: 4.4, reviews_count: 88, image: "https://images.unsplash.com/photo-1571513800374-4e6b3a6e3e3e?w=500" },
+      { id: 11, name: "جينز سكيني نسائي", category: "جينز (سكيني، وايد ليق، موم فيت)", price: 189, old_price: 249, stock: 18, is_active: true, rating: 4.7, reviews_count: 112, image: "https://images.unsplash.com/photo-1541099649255-6b3e8e0d5e1e?w=500" },
+      { id: 12, name: "جاكيت جلد نسائي", category: "جاكيتات جلد", price: 449, old_price: 549, stock: 7, is_active: false, rating: 4.8, reviews_count: 54, image: "https://images.unsplash.com/photo-1551232864-3e3e3e3e3e3e?w=500" },
+    ];
+
+    const INITIAL_CUSTOMERS = [
+      { id: 1, name: "أحمد محمد", email: "test@test.com", phone: "700000002", role: "customer", roleLabel: "عميل", register_date: "2026-09-15", orders_count: 5, total_spent: 17753.00, is_active: true, is_vip: true },
+      { id: 2, name: "سارة القحطاني", email: "sara@test.com", phone: "700000003", role: "customer", roleLabel: "عميل", register_date: "2026-09-20", orders_count: 1, total_spent: 1500.00, is_active: true, is_vip: false },
+      { id: 3, name: "مدير المتجر", email: "admin@store.test", phone: "700000001", role: "admin", roleLabel: "مدير المتجر", register_date: "2026-08-01", orders_count: 0, total_spent: 0.00, is_active: true, is_vip: false },
+      { id: 4, name: "مسؤول المنتجات", email: "manager@store.test", phone: "700000010", role: "admin", roleLabel: "مشرف منتجات", register_date: "2026-08-05", orders_count: 0, total_spent: 0.00, is_active: true, is_vip: false },
+      { id: 5, name: "فاطمة الزهراء", email: "fatima@test.com", phone: "771234567", role: "customer", roleLabel: "عميل", register_date: "2026-10-01", orders_count: 2, total_spent: 850.00, is_active: true, is_vip: false },
+      { id: 6, name: "خالد بن الوليد", email: "khaled@test.com", phone: "739876543", role: "customer", roleLabel: "عميل", register_date: "2026-10-04", orders_count: 1, total_spent: 449.00, is_active: false, is_vip: false },
+    ];
+
+    const INITIAL_CATEGORIES = [
+      { id: 1, name: "فساتين سهرة", icon: "Sparkles", itemsCount: 4, is_active: true, color: "from-pink-500 to-rose-500" },
+      { id: 2, name: "عبايات سوداء كلاسيك", icon: "Grid", itemsCount: 3, is_active: true, color: "from-slate-700 to-slate-900" },
+      { id: 3, name: "حجابات شيفون", icon: "Package", itemsCount: 5, is_active: true, color: "from-indigo-500 to-purple-600" },
+      { id: 4, name: "حقائب يد", icon: "ShoppingCart", itemsCount: 2, is_active: true, color: "from-amber-500 to-orange-500" },
+      { id: 5, name: "كعب عالي", icon: "Grid", itemsCount: 4, is_active: true, color: "from-emerald-500 to-teal-600" },
+      { id: 6, name: "عقود وسلاسل", icon: "Sparkles", itemsCount: 3, is_active: true, color: "from-blue-500 to-cyan-500" },
+      { id: 7, name: "أطقم رياضية نسائية", icon: "Users", itemsCount: 6, is_active: true, color: "from-violet-500 to-purple-500" },
+      { id: 8, name: "بيجامات نسائية", icon: "Package", itemsCount: 2, is_active: true, color: "from-fuchsia-500 to-pink-600" },
+    ];
+
+    const INITIAL_SETTINGS = {
+      store_name: "بركة عدن",
+      store_tagline: "لوحة تحكم المتجر العصرية المتكاملة",
+      store_phone: "777123456",
+      whatsapp_number: "967772055335",
+      store_email: "info@store.com",
+      store_currency: "SAR",
+      transfer_recipient_name: "صبري العبد ناصر الربيزي",
+      shipping_fee: 25,
+      free_shipping_threshold: 200,
+      delivery_days: "2 - 4 أيام عمل",
+      enable_cod: true,
+      enable_kuraimi: true,
+      enable_cards: false,
+      enable_sms_alerts: true,
+      enable_email_alerts: true,
+      maintenance_mode: false,
+    };
+
+    const INITIAL_DISCOUNTS = [
+      { id: 1, code: "BARAKAT10", type: "percent", value: 10, min_order: 100, max_usage: 500, used_count: 142, status: "active", expires_at: "2026-12-31" },
+      { id: 2, code: "WELCOME50", type: "fixed", value: 50, min_order: 300, max_usage: 100, used_count: 88, status: "active", expires_at: "2026-11-30" },
+      { id: 3, code: "SUMMER20", type: "percent", value: 20, min_order: 200, max_usage: 250, used_count: 250, status: "expired", expires_at: "2026-09-30" },
+    ];
+
+    const TOP_PRODUCTS = [
+      { name: "فستان سهرة مطرز فاخر", category: "فساتين سهرة", sales: 42, revenue: 18858, percent: 88, image: "https://images.unsplash.com/photo-1566174049881-81001826583c?w=120&auto=format&fit=crop&q=80" },
+      { name: "عباية مطرزة كلاسيكية", category: "عبايات سوداء", sales: 31, revenue: 9269, percent: 72, image: "https://images.unsplash.com/photo-1583391733956-375ef4cefee3?w=120&auto=format&fit=crop&q=80" },
+      { name: "حجاب شيفون فاخر", category: "حجابات", sales: 58, revenue: 2842, percent: 94, image: "https://images.unsplash.com/photo-1611042553365-9b101c1c0e3a?w=120&auto=format&fit=crop&q=80" },
+      { name: "حقيبة يد جلدية فاخرة", category: "حقائب يد", sales: 18, revenue: 6282, percent: 54, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=120&auto=format&fit=crop&q=80" },
+    ];
+
+    // Status mapping & styling tokens
+    const STATUS_CONFIG = {
+      pending: { label: "في الانتظار", bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400", border: "border-amber-200 dark:border-amber-800/50", dot: "bg-amber-500" },
+      processing: { label: "قيد المعالجة", bg: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-600 dark:text-orange-400", border: "border-orange-200 dark:border-orange-800/50", dot: "bg-orange-500" },
+      shipped: { label: "قيد الشحن", bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-600 dark:text-blue-400", border: "border-blue-200 dark:border-blue-800/50", dot: "bg-blue-500" },
+      delivered: { label: "مكتمل", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/50", dot: "bg-emerald-500" },
+      cancelled: { label: "ملغي", bg: "bg-rose-50 dark:bg-rose-950/40", text: "text-rose-600 dark:text-rose-400", border: "border-rose-200 dark:border-rose-800/50", dot: "bg-rose-500" },
+    };
+
+    // ==========================================
+    // Mini Sparkline SVG Generator
+    // ==========================================
+    const Sparkline = ({ points, color = "#6D5DF6", fill = "rgba(109, 93, 246, 0.12)" }) => {
+      const min = Math.min(...points);
+      const max = Math.max(...points) || 1;
+      const height = 36;
+      const width = 110;
+      const step = width / (points.length - 1);
+
+      const coords = points.map((p, i) => {
+        const x = i * step;
+        const y = height - ((p - min) / (max - min || 1)) * (height - 8) - 4;
+        return `${x},${y}`;
+      });
+
+      const pathData = coords.reduce((acc, curr, i) => {
+        if (i === 0) return `M ${curr}`;
+        const prev = coords[i - 1].split(',');
+        const cur = curr.split(',');
+        const midX = (parseFloat(prev[0]) + parseFloat(cur[0])) / 2;
+        return `${acc} C ${midX},${prev[1]} ${midX},${cur[1]} ${cur[0]},${cur[1]}`;
+      }, "");
+
+      const areaData = `${pathData} L ${width},${height} L 0,${height} Z`;
+
+      return (
+        <svg width={width} height={height} className="overflow-visible">
+          <path d={areaData} fill={fill} />
+          <path d={pathData} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      );
+    };
+
+    // ==========================================
+    // Interactive Area Chart Component (Custom SVG)
+    // ==========================================
+    const SalesAreaChart = ({ period, isEmpty, onToggleEmpty }) => {
+      const [hoverIndex, setHoverIndex] = useState(null);
+
+      // Datasets for 7, 30, and 90 days
+      const dataSets = {
+        '7': [
+          { label: "02/10", value: 1200 },
+          { label: "03/10", value: 2400 },
+          { label: "04/10", value: 1800 },
+          { label: "05/10", value: 3450 },
+          { label: "06/10", value: 2900 },
+          { label: "07/10", value: 4200 },
+          { label: "08/10", value: 3303 },
+        ],
+        '30': [
+          { label: "08/09", value: 0 },
+          { label: "11/09", value: 450 },
+          { label: "13/09", value: 920 },
+          { label: "15/09", value: 600 },
+          { label: "17/09", value: 1400 },
+          { label: "19/09", value: 1100 },
+          { label: "21/09", value: 2150 },
+          { label: "23/09", value: 1800 },
+          { label: "25/09", value: 2600 },
+          { label: "27/09", value: 3100 },
+          { label: "29/09", value: 2450 },
+          { label: "01/10", value: 3900 },
+          { label: "03/10", value: 4500 },
+          { label: "05/10", value: 3800 },
+          { label: "07/10", value: 5000 },
+          { label: "08/10", value: 5800 },
+        ],
+        '90': [
+          { label: "يوليو 1", value: 3200 },
+          { label: "يوليو 15", value: 4800 },
+          { label: "أغسطس 1", value: 6100 },
+          { label: "أغسطس 15", value: 7400 },
+          { label: "سبتمبر 1", value: 9200 },
+          { label: "سبتمبر 15", value: 12400 },
+          { label: "أكتوبر 1", value: 16100 },
+          { label: "أكتوبر 8", value: 19253 },
+        ]
+      };
+
+      const rawData = isEmpty ? [] : (dataSets[period] || dataSets['30']);
+      const width = 850;
+      const height = 260;
+      const padding = { top: 25, right: 35, bottom: 40, left: 55 };
+
+      if (isEmpty || rawData.length === 0) {
+        return (
+          <div className="h-72 flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-500 mb-3 shadow-soft animate-gentle">
+              <Icon name="BarChart3" size={32} />
+            </div>
+            <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-1">
+              لا توجد مبيعات مسجلة في هذه الفترة
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mb-4">
+              تبدو الأمور هادئة حالياً! شارك رابط المتجر أو أطلق حملة تسويقية جديدة عبر قسم التسويق لبدء تسجيل الطلبات.
+            </p>
+            <button
+              onClick={onToggleEmpty}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-brand-600 bg-white dark:bg-slate-800 border border-brand-200 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950 transition-colors shadow-sm"
+            >
+              <Icon name="RefreshCw" size={14} />
+              استعادة البيانات النموذجية
+            </button>
+          </div>
+        );
+      }
+
+      const maxValue = Math.max(...rawData.map(d => d.value), 1000);
+      const graphW = width - padding.left - padding.right;
+      const graphH = height - padding.top - padding.bottom;
+
+      const points = rawData.map((d, i) => {
+        const x = padding.right + (i / (rawData.length - 1)) * graphW;
+        const y = padding.top + graphH - (d.value / maxValue) * graphH;
+        return { x, y, ...d };
+      });
+
+      // Construct Smooth SVG Bezier Path
+      let pathD = `M ${points[0].x},${points[0].y}`;
+      for (let i = 0; i < points.length - 1; i++) {
+        const curr = points[i];
+        const next = points[i + 1];
+        const cpX1 = curr.x + (next.x - curr.x) / 3;
+        const cpY1 = curr.y;
+        const cpX2 = curr.x + ((next.x - curr.x) * 2) / 3;
+        const cpY2 = next.y;
+        pathD += ` C ${cpX1},${cpY1} ${cpX2},${cpY2} ${next.x},${next.y}`;
+      }
+
+      const areaD = `${pathD} L ${points[points.length - 1].x},${padding.top + graphH} L ${points[0].x},${padding.top + graphH} Z`;
+
+      return (
+        <div className="relative w-full overflow-hidden select-none">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
+            <defs>
+              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#6D5DF6" stopOpacity="0.38" />
+                <stop offset="50%" stopColor="#6D5DF6" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#6D5DF6" stopOpacity="0.0" />
+              </linearGradient>
+              <filter id="shadowFilter" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#6D5DF6" floodOpacity="0.25" />
+              </filter>
+            </defs>
+
+            {/* Horizontal Grid lines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+              const y = padding.top + graphH * (1 - ratio);
+              const val = Math.round(ratio * maxValue);
+              return (
+                <g key={idx}>
+                  <line
+                    x1={padding.right}
+                    y1={y}
+                    x2={width - padding.left}
+                    y2={y}
+                    stroke="currentColor"
+                    className="text-slate-100 dark:text-slate-800"
+                    strokeDasharray={idx === 0 ? "none" : "4 4"}
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={width - padding.left + 12}
+                    y={y + 4}
+                    fill="currentColor"
+                    className="text-[11px] font-mono fill-slate-400 dark:fill-slate-500 text-left"
+                    textAnchor="start"
+                  >
+                    {val.toLocaleString()} ر.س
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Area & Stroke */}
+            <path d={areaD} fill="url(#areaGradient)" />
+            <path d={pathD} fill="none" stroke="#6D5DF6" strokeWidth="3" strokeLinecap="round" filter="url(#shadowFilter)" />
+
+            {/* Data Points and Interaction */}
+            {points.map((p, i) => (
+              <g key={i}>
+                {/* Invisible large hover hit-target */}
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r="14"
+                  fill="transparent"
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoverIndex(i)}
+                  onMouseLeave={() => setHoverIndex(null)}
+                />
+
+                {/* Point dot */}
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={hoverIndex === i ? 6 : 4}
+                  fill="#FFFFFF"
+                  stroke="#6D5DF6"
+                  strokeWidth={hoverIndex === i ? 3 : 2}
+                  className="transition-all duration-150 pointer-events-none"
+                />
+
+                {/* X axis labels (display every 2 or 3 points if long) */}
+                {(rawData.length <= 10 || i % 2 === 0 || i === rawData.length - 1) && (
+                  <text
+                    x={p.x}
+                    y={height - 12}
+                    fill="currentColor"
+                    className="text-[11px] font-mono fill-slate-400 dark:fill-slate-500"
+                    textAnchor="middle"
+                  >
+                    {p.label}
+                  </text>
+                )}
+              </g>
+            ))}
+
+            {/* Active Vertical Guideline */}
+            {hoverIndex !== null && (
+              <line
+                x1={points[hoverIndex].x}
+                y1={padding.top}
+                x2={points[hoverIndex].x}
+                y2={padding.top + graphH}
+                stroke="#6D5DF6"
+                strokeWidth="1.5"
+                strokeDasharray="3 3"
+                className="opacity-70"
+              />
+            )}
+          </svg>
+
+          {/* Floating Tooltip */}
+          {hoverIndex !== null && (
+            <div
+              className="absolute z-20 pointer-events-none transition-all duration-75 transform -translate-x-1/2 -translate-y-full"
+              style={{
+                left: `${(points[hoverIndex].x / width) * 100}%`,
+                top: `${(points[hoverIndex].y / height) * 100 - 10}%`
+              }}
+            >
+              <div className="bg-slate-900/90 dark:bg-white text-white dark:text-slate-900 backdrop-blur-md px-3 py-2 rounded-xl shadow-xl text-xs flex flex-col gap-0.5 border border-slate-700 dark:border-slate-200">
+                <span className="text-[10px] text-slate-300 dark:text-slate-500 font-medium">
+                  التاريخ: {points[hoverIndex].label}
+                </span>
+                <span className="font-bold text-sm text-brand-300 dark:text-brand-600 font-mono">
+                  {points[hoverIndex].value.toLocaleString()} ر.س
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==========================================
+    // Donut Chart Component
+    // ==========================================
+    const OrderStatusDonut = ({ orders }) => {
+      const stats = useMemo(() => {
+        const counts = { processing: 3, shipped: 2, delivered: 1, cancelled: 0 };
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        return { counts, total };
+      }, [orders]);
+
+      const slices = [
+        { key: "processing", label: "قيد المعالجة", count: stats.counts.processing, color: "#F59E0B" },
+        { key: "shipped", label: "قيد الشحن", count: stats.counts.shipped, color: "#3B82F6" },
+        { key: "delivered", label: "مكتمل", count: stats.counts.delivered, color: "#10B981" },
+        { key: "cancelled", label: "ملغي", count: stats.counts.cancelled, color: "#EF4444" },
+      ];
+
+      // SVG Donut calculations
+      const size = 180;
+      const strokeWidth = 22;
+      const radius = (size - strokeWidth) / 2;
+      const circumference = 2 * Math.PI * radius;
+      let cumulativeOffset = 0;
+
+      return (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="relative w-44 h-44 flex items-center justify-center flex-shrink-0">
+            <svg width={size} height={size} className="transform -rotate-90">
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="transparent"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                className="text-slate-100 dark:text-slate-800"
+              />
+              {slices.map((slice, i) => {
+                const percent = slice.count / (stats.total || 1);
+                const strokeDasharray = `${circumference * percent} ${circumference * (1 - percent)}`;
+                const strokeDashoffset = -cumulativeOffset;
+                cumulativeOffset += circumference * percent;
+
+                if (slice.count === 0) return null;
+
+                return (
+                  <circle
+                    key={i}
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="transparent"
+                    stroke={slice.color}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={strokeDasharray}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    className="transition-all duration-500 hover:opacity-80 cursor-pointer"
+                  />
+                );
+              })}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+              <span className="text-2xl font-black text-slate-800 dark:text-slate-100 font-mono">
+                {stats.total}
+              </span>
+              <span className="text-xs font-semibold text-slate-400">إجمالي الطلبات</span>
+            </div>
+          </div>
+
+          {/* Legends */}
+          <div className="flex-1 w-full space-y-2.5">
+            {slices.map((slice, i) => {
+              const pct = Math.round((slice.count / (stats.total || 1)) * 100);
+              return (
+                <div key={i} className="flex items-center justify-between text-xs p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }}></span>
+                    <span className="font-medium text-slate-600 dark:text-slate-300">{slice.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{slice.count}</span>
+                    <span className="text-[11px] text-slate-400 font-mono">({pct}%)</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // Toast Notification Component
+    // ==========================================
+    const Toast = ({ message, type = "success", onClose }) => {
+      const [visible, setVisible] = useState(false);
+
+      useEffect(() => {
+        if (message) {
+          setVisible(true);
+        } else {
+          setVisible(false);
+        }
+      }, [message]);
+
+      if (!message) return null;
+
+      const config = {
+        success: { bg: "bg-emerald-500", icon: "CheckCircle2", border: "border-emerald-400" },
+        error:   { bg: "bg-rose-500",    icon: "AlertCircle",  border: "border-rose-400" },
+        info:    { bg: "bg-blue-500",    icon: "Bell",         border: "border-blue-400" },
+      };
+      const c = config[type] || config.success;
+
+      return (
+        <div
+          className={`fixed bottom-6 left-1/2 z-[100] -translate-x-1/2 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border ${c.bg} ${c.border} text-white transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+          style={{ minWidth: 280, maxWidth: 400 }}
+        >
+          <Icon name={c.icon} size={20} className="flex-shrink-0" />
+          <span className="text-sm font-semibold flex-1">{message}</span>
+          <button onClick={onClose} className="opacity-70 hover:opacity-100 transition-opacity">
+            <Icon name="X" size={16} />
+          </button>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // ==========================================
+    // Order Detail Modal Component
+    // ==========================================
+    const OrderModal = ({ order, onClose, onUpdateStatus, isUpdating }) => {
+      if (!order) return null;
+      const [newStatus, setNewStatus] = useState(order.status);
+      const status = STATUS_CONFIG[newStatus] || STATUS_CONFIG.pending;
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-surface-darkCard rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-800 relative animate-scaleUp">
+            <button
+              onClick={onClose}
+              className="absolute left-5 top-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Icon name="X" size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-500 font-mono font-bold">
+                #
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{order.id}</h3>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${status.bg} ${status.text} ${status.border}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                    {status.label}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">تاريخ الطلب: {order.date}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">العميل:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{order.customer}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">البريد الإلكتروني:</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-400">{order.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">الهاتف:</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-400">{order.phone || 'غير مسجل'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">طريقة الدفع:</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{order.paymentMethod || 'محفظة بنكية'}</span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 flex justify-between items-center">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">المبلغ الإجمالي:</span>
+                  <span className="text-lg font-black text-brand-600 dark:text-brand-400 font-mono">
+                    {order.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} ر.س
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Update Control */}
+              <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/40">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  تحديث حالة الطلب في قاعدة البيانات:
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="flex-1 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="pending">في الانتظار (Pending)</option>
+                    <option value="processing">قيد المعالجة (Processing)</option>
+                    <option value="shipped">قيد الشحن (Shipped)</option>
+                    <option value="delivered">مكتمل (Delivered)</option>
+                    <option value="cancelled">ملغي (Cancelled)</option>
+                  </select>
+                  <button
+                    disabled={isUpdating}
+                    onClick={() => onUpdateStatus(order, newStatus)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 transition-colors shadow-soft flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isUpdating ? <Icon name="RefreshCw" size={14} className="animate-spin" /> : <Icon name="Check" size={14} />}
+                    حفظ في الخادم
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={onClose}
+                className="py-2.5 px-6 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+// ==========================================
+    // API Configuration & Login Modal Component
+    // ==========================================
+    const ApiConfigModal = ({
+      isOpen,
+      onClose,
+      apiUrl,
+      setApiUrl,
+      onLogin,
+      onSwitchToDemo,
+      onLogout,
+      isLoggedIn,
+      connectionStatus,
+      errorMessage,
+      isLoading
+    }) => {
+      const [email, setEmail] = useState("admin@store.test");
+      const [password, setPassword] = useState("password");
+
+      if (!isOpen) return null;
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-surface-darkCard rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-800 relative animate-scaleUp">
+            <button
+              onClick={onClose}
+              className="absolute left-5 top-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Icon name="X" size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-soft">
+                <Icon name="Server" size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                  ربط الخادم الحقيقي (Laravel API)
+                </h3>
+                <p className="text-xs text-slate-400">إدارة الاتصال بقاعدة البيانات ومسارات الـ REST API</p>
+              </div>
+            </div>
+
+            {/* Connection Status Badge */}
+            <div className="mb-4">
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${
+                connectionStatus === 'connected'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                  : connectionStatus === 'demo'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+              }`}>
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  connectionStatus === 'connected' ? 'bg-emerald-500 animate-ping' : connectionStatus === 'demo' ? 'bg-amber-500' : 'bg-slate-400'
+                }`}></span>
+                {connectionStatus === 'connected' ? '✓ متصل بالخادم الحقيقي' : connectionStatus === 'demo' ? '◎ وضع المعاينة التجريبي' : '⟳ جارٍ الاتصال...'}
+              </span>
+            </div>
+
+            {/* API URL Input */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                عنوان الـ API (Base URL)
+              </label>
+              <input
+                type="text"
+                dir="ltr"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="http://127.0.0.1:8009/api"
+                className="w-full bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500"
+              />
+            </div>
+
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="mb-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-600 dark:text-rose-400 font-medium flex items-start gap-2">
+                <Icon name="AlertCircle" size={14} className="flex-shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {isLoggedIn ? (
+              <div className="space-y-3">
+                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                  أنت متصل بالخادم بنجاح ✓
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onClose}
+                    className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-950/60 transition-colors"
+                  >
+                    إغلاق
+                  </button>
+                  <button
+                    onClick={onLogout}
+                    className="px-4 py-2.5 rounded-2xl text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 transition-colors flex items-center gap-1.5"
+                  >
+                    <Icon name="LogOut" size={14} />
+                    تسجيل الخروج
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">البريد الإلكتروني</label>
+                  <input
+                    type="email"
+                    dir="ltr"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">كلمة المرور</label>
+                  <input
+                    type="password"
+                    dir="ltr"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    disabled={isLoading}
+                    onClick={() => onLogin(email, password)}
+                    className="flex-1 py-3 rounded-2xl text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 transition-colors shadow-soft disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {isLoading ? <Icon name="RefreshCw" size={14} className="animate-spin" /> : <Icon name="LogIn" size={14} />}
+                    تسجيل الدخول والربط
+                  </button>
+                </div>
+                <button
+                  onClick={onSwitchToDemo}
+                  className="w-full py-2.5 rounded-2xl text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  الاستمرار في وضع المعاينة التجريبي ←
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // 1. PRODUCTS MANAGEMENT VIEW (المنتجات)
+    // ==========================================
+    const ProductsView = ({ products, setProducts, categories, isLiveMode, showToast }) => {
+      const [searchQuery, setSearchQuery] = useState("");
+      const [categoryFilter, setCategoryFilter] = useState("all");
+      const [stockFilter, setStockFilter] = useState("all");
+      const [modalOpen, setModalOpen] = useState(false);
+      const [editingProduct, setEditingProduct] = useState(null);
+      const [formData, setFormData] = useState({
+        name: "", category: categories[0]?.name || "", price: "", old_price: "", stock: "", image: "", is_active: true
+      });
+
+      const filteredProducts = useMemo(() => {
+        return products.filter(p => {
+          const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()));
+          const matchCat = categoryFilter === "all" || p.category === categoryFilter;
+          const matchStock = stockFilter === "all" ||
+            (stockFilter === "in_stock" && p.stock >= 10) ||
+            (stockFilter === "low_stock" && p.stock > 0 && p.stock < 10) ||
+            (stockFilter === "out_of_stock" && p.stock === 0);
+          return matchSearch && matchCat && matchStock;
+        });
+      }, [products, searchQuery, categoryFilter, stockFilter]);
+
+      const totalProds = products.length;
+      const activeProds = products.filter(p => p.is_active).length;
+      const lowStockProds = products.filter(p => p.stock > 0 && p.stock < 10).length;
+      const outOfStockProds = products.filter(p => p.stock === 0).length;
+
+      const handleOpenModal = (product = null) => {
+        setEditingProduct(product);
+        setFormData(product
+          ? { name: product.name, category: product.category, price: product.price, old_price: product.old_price || "", stock: product.stock, image: product.image || "", is_active: product.is_active }
+          : { name: "", category: categories[0]?.name || "", price: "", old_price: "", stock: "", image: "", is_active: true }
+        );
+        setModalOpen(true);
+      };
+
+      const handleSave = async (e) => {
+        e.preventDefault();
+        const payload = {
+          ...formData,
+          price: parseFloat(formData.price) || 0,
+          old_price: formData.old_price ? parseFloat(formData.old_price) : null,
+          stock: parseInt(formData.stock) || 0,
+        };
+        if (editingProduct) {
+          setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...payload } : p));
+          showToast(`تم تحديث "${payload.name}" بنجاح! ✏️`);
+        } else {
+          const newId = Math.max(0, ...products.map(p => p.id)) + 1;
+          setProducts(prev => [...prev, { id: newId, rating: 4.8, reviews_count: 0, ...payload }]);
+          showToast(`تمت إضافة "${payload.name}" للمتجر! ✅`);
+        }
+        setModalOpen(false);
+      };
+
+      const handleToggleActive = (id, e) => {
+        e.stopPropagation();
+        setProducts(prev => prev.map(p => {
+          if (p.id === id) {
+            showToast(`تم ${!p.is_active ? 'تفعيل' : 'إخفاء'} المنتج "${p.name}"`);
+            return { ...p, is_active: !p.is_active };
+          }
+          return p;
+        }));
+      };
+
+      const handleDelete = (id, e) => {
+        e.stopPropagation();
+        const prod = products.find(p => p.id === id);
+        if (window.confirm(`هل تريد حذف "${prod?.name}"؟`)) {
+          setProducts(prev => prev.filter(p => p.id !== id));
+          showToast(`تم حذف المنتج بنجاح 🗑️`);
+        }
+      };
+
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+                <span className="p-2 rounded-2xl bg-brand-500 text-white shadow-soft">
+                  <Icon name="Package" size={24} />
+                </span>
+                إدارة المنتجات والمخزون
+              </h2>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                تصفح وإدارة جميع منتجات المتجر، مراقبة المخزون، والأسعار وحالة العرض
+              </p>
+            </div>
+
+            <button
+              onClick={() => handleOpenModal()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 transition-all shadow-soft hover:shadow-soft-hover"
+            >
+              <Icon name="Plus" size={16} />
+              <span>إضافة منتج جديد</span>
+            </button>
+          </div>
+
+          {/* KPI MINI CARDS */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-slate-400">إجمالي المنتجات</span>
+              <div className="text-2xl font-black text-slate-800 dark:text-slate-100 font-mono mt-1">{totalProds}</div>
+            </div>
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-emerald-500">المنتجات المعروضة</span>
+              <div className="text-2xl font-black text-emerald-600 font-mono mt-1">{activeProds}</div>
+            </div>
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-amber-500">منخفض المخزون (&lt;10)</span>
+              <div className="text-2xl font-black text-amber-500 font-mono mt-1">{lowStockProds}</div>
+            </div>
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-rose-500">نفدت الكمية</span>
+              <div className="text-2xl font-black text-rose-500 font-mono mt-1">{outOfStockProds}</div>
+            </div>
+          </div>
+
+          {/* FILTERS BAR */}
+          <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-4 border border-slate-100 dark:border-[#1F293D] shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="relative w-full md:w-80">
+              <span className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+                <Icon name="Search" size={16} />
+              </span>
+              <input
+                type="text"
+                placeholder="بحث بالاسم أو التصنيف..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 pl-4 pr-10 py-2.5 rounded-2xl border border-transparent focus:border-brand-500/30 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full md:w-auto">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-semibold text-slate-700 dark:text-slate-300 py-2.5 px-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 focus:outline-none cursor-pointer flex-1 md:flex-none"
+              >
+                <option value="all">كل التصنيفات</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value)}
+                className="bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-semibold text-slate-700 dark:text-slate-300 py-2.5 px-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 focus:outline-none cursor-pointer flex-1 md:flex-none"
+              >
+                <option value="all">كل حالات المخزون</option>
+                <option value="in_stock">متوفر (≥ 10)</option>
+                <option value="low_stock">مخزون منخفض (&lt; 10)</option>
+                <option value="out_of_stock">نافد (0)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* PRODUCTS TABLE */}
+          <div className="bg-white dark:bg-[#131B2E] rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/20">
+                    <th className="py-4 pr-5">المنتج</th>
+                    <th className="py-4">التصنيف</th>
+                    <th className="py-4">السعر</th>
+                    <th className="py-4">المخزون</th>
+                    <th className="py-4">الحالة</th>
+                    <th className="py-4 pl-5 text-left">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="py-12 text-center text-slate-400 font-medium">
+                        لا توجد منتجات مطابقة لخيارات البحث
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((product) => {
+                      const isLow = product.stock > 0 && product.stock < 10;
+                      const isOut = product.stock === 0;
+
+                      return (
+                        <tr
+                          key={product.id}
+                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                          onClick={() => handleOpenModal(product)}
+                        >
+                          {/* Image & Title */}
+                          <td className="py-3.5 pr-5">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-12 h-12 rounded-2xl object-cover border border-slate-100 dark:border-slate-800 shadow-sm flex-shrink-0"
+                              />
+                              <div>
+                                <p className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-brand-500 transition-colors">
+                                  {product.name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[10px] text-amber-500 font-bold flex items-center gap-0.5">
+                                    ★ {product.rating || "4.8"}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">({product.reviews_count || 0} تقييم)</span>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Category */}
+                          <td className="py-3.5">
+                            <span className="inline-block px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-100 dark:border-brand-900/40">
+                              {product.category || "عام"}
+                            </span>
+                          </td>
+
+                          {/* Price */}
+                          <td className="py-3.5 font-mono font-bold">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-slate-900 dark:text-slate-100 text-sm">
+                                {product.price.toLocaleString()}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-sans">ر.س</span>
+                              {product.old_price && (
+                                <span className="text-[11px] text-slate-400 line-through">
+                                  {product.old_price.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Stock */}
+                          <td className="py-3.5">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                              isOut
+                                ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-800/40"
+                                : isLow
+                                ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 border border-amber-200 dark:border-amber-800/40"
+                                : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border border-emerald-200 dark:border-emerald-800/40"
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${isOut ? "bg-rose-500" : isLow ? "bg-amber-500" : "bg-emerald-500"}`}></span>
+                              {isOut ? "نافد" : isLow ? `${product.stock} فقط` : `${product.stock} متوفر`}
+                            </span>
+                          </td>
+
+                          {/* Active Status Toggle */}
+                          <td className="py-3.5">
+                            <button
+                              onClick={(e) => handleToggleActive(product.id, e)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-2xl text-[11px] font-bold transition-all ${
+                                product.is_active
+                                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700"
+                              }`}
+                              title="انقر لتغيير حالة العرض"
+                            >
+                              <Icon name={product.is_active ? "ToggleRight" : "ToggleLeft"} size={16} />
+                              <span>{product.is_active ? "معروض للبيع" : "معطل"}</span>
+                            </button>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-3.5 pl-5 text-left">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenModal(product);
+                                }}
+                                className="p-2 rounded-xl text-slate-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-950 transition-colors"
+                                title="تعديل المنتج"
+                              >
+                                <Icon name="Edit" size={15} />
+                              </button>
+                              <button
+                                onClick={(e) => handleDelete(product.id, e)}
+                                className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
+                                title="حذف المنتج"
+                              >
+                                <Icon name="Trash2" size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ADD / EDIT PRODUCT MODAL */}
+          {modalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+              <div className="bg-white dark:bg-[#131B2E] rounded-3xl max-w-lg w-full border border-slate-100 dark:border-[#1F293D] shadow-2xl p-6 relative">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                    {editingProduct ? "تعديل بيانات المنتج" : "إضافة منتج جديد للمتجر"}
+                  </h3>
+                  <button onClick={() => setModalOpen(false)} className="p-1 rounded-xl text-slate-400 hover:text-slate-600">
+                    <Icon name="X" size={18} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSave} className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">اسم المنتج</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="مثال: فستان سهرة مخملي فاخر"
+                      className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">التصنيف</label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                      >
+                        {categories.map(c => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">الكمية بالمخزون</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.stock}
+                        onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                        className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">السعر (ر.س)</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        placeholder="299"
+                        className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">السعر القديم (اختياري)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.old_price}
+                        onChange={(e) => setFormData({ ...formData, old_price: e.target.value })}
+                        placeholder="399"
+                        className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">رابط صورة المنتج (URL)</label>
+                    <input
+                      type="url"
+                      value={formData.image}
+                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                      placeholder="https://..."
+                      className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="is_active_check"
+                      checked={formData.is_active}
+                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                      className="rounded border-slate-300 text-brand-500 focus:ring-brand-500"
+                    />
+                    <label htmlFor="is_active_check" className="text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">
+                      عرض المنتج فوراً في المتجر (نشط)
+                    </label>
+                  </div>
+
+                  <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 rounded-2xl text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 transition-colors shadow-soft"
+                    >
+                      {editingProduct ? "حفظ التعديلات" : "إضافة المنتج"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className="px-4 py-3 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors"
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==========================================
+    // 2. USERS & CUSTOMERS VIEW (المستخدمون والعملاء)
+    // ==========================================
+    const UsersView = ({ customers, setCustomers, showToast }) => {
+      const [searchQuery, setSearchQuery] = useState("");
+      const [roleFilter, setRoleFilter] = useState("all");
+
+      const filteredCustomers = useMemo(() => {
+        return customers.filter(c => {
+          const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (c.phone && c.phone.includes(searchQuery));
+          const matchRole = roleFilter === "all" || c.role === roleFilter;
+          return matchSearch && matchRole;
+        });
+      }, [customers, searchQuery, roleFilter]);
+
+      const handleToggleUserStatus = (id) => {
+        setCustomers(prev => prev.map(c => {
+          if (c.id === id) {
+            const nextStatus = !c.is_active;
+            showToast(`تم ${nextStatus ? 'تفعيل' : 'إيقاف'} حساب ${c.name} 🟢`);
+            return { ...c, is_active: nextStatus };
+          }
+          return c;
+        }));
+      };
+
+      const totalUsers = customers.length;
+      const totalVip = customers.filter(c => c.is_vip || c.total_spent > 5000).length;
+      const totalAdmins = customers.filter(c => c.role === 'admin').length;
+      const totalOrdersAll = customers.reduce((sum, c) => sum + (c.orders_count || 0), 0);
+
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+                <span className="p-2 rounded-2xl bg-brand-500 text-white shadow-soft">
+                  <Icon name="Users" size={24} />
+                </span>
+                إدارة المستخدمين والعملاء
+              </h2>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                سجل حسابات العملاء والمدراء، ومتابعة النشاط وإجمالي المشتريات
+              </p>
+            </div>
+          </div>
+
+          {/* KPIS */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-slate-400">إجمالي الحسابات</span>
+              <div className="text-2xl font-black text-slate-800 dark:text-slate-100 font-mono mt-1">{totalUsers}</div>
+            </div>
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-purple-500">عملاء VIP المميزون</span>
+              <div className="text-2xl font-black text-purple-600 font-mono mt-1">{totalVip}</div>
+            </div>
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-emerald-500">الطلبات المنفذة</span>
+              <div className="text-2xl font-black text-emerald-600 font-mono mt-1">{totalOrdersAll}</div>
+            </div>
+            <div className="bg-white dark:bg-[#131B2E] p-4 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+              <span className="text-xs font-bold text-brand-500">فريق الإدارة</span>
+              <div className="text-2xl font-black text-brand-600 font-mono mt-1">{totalAdmins}</div>
+            </div>
+          </div>
+
+          {/* SEARCH & FILTERS */}
+          <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-4 border border-slate-100 dark:border-[#1F293D] shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="relative w-full md:w-80">
+              <span className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+                <Icon name="Search" size={16} />
+              </span>
+              <input
+                type="text"
+                placeholder="بحث بالاسم، البريد أو الهاتف..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 pl-4 pr-10 py-2.5 rounded-2xl border border-transparent focus:border-brand-500/30 focus:outline-none"
+              />
+            </div>
+
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-semibold text-slate-700 dark:text-slate-300 py-2.5 px-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 focus:outline-none cursor-pointer w-full md:w-auto"
+            >
+              <option value="all">كل الأدوار</option>
+              <option value="customer">العملاء فقط</option>
+              <option value="admin">المدراء والمشرفين</option>
+            </select>
+          </div>
+
+          {/* USERS TABLE */}
+          <div className="bg-white dark:bg-[#131B2E] rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/20">
+                    <th className="py-4 pr-5">المستخدم</th>
+                    <th className="py-4">رقم الهاتف</th>
+                    <th className="py-4">الدور</th>
+                    <th className="py-4">الطلبات</th>
+                    <th className="py-4">إجمالي المشتريات</th>
+                    <th className="py-4">تاريخ التسجيل</th>
+                    <th className="py-4 pl-5 text-left">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                  {filteredCustomers.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="py-12 text-center text-slate-400 font-medium">
+                        لا يوجد مستخدمون مطابقون لمعايير البحث
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCustomers.map((user) => {
+                      const initials = user.name.split(" ").map(n => n[0]).slice(0, 2).join("");
+                      const isAdmin = user.role === "admin";
+                      const isVip = user.is_vip || (user.total_spent > 5000);
+
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="py-3.5 pr-5">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                                isAdmin
+                                  ? "bg-brand-500 text-white shadow-soft"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                              }`}>
+                                {initials}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-800 dark:text-slate-100">{user.name}</span>
+                                  {isVip && (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 dark:bg-amber-950/40 text-amber-600 border border-amber-200">
+                                      VIP
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[11px] text-slate-400 block">{user.email}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 font-mono text-slate-600 dark:text-slate-300">
+                            {user.phone || "غير محدد"}
+                          </td>
+
+                          <td className="py-3.5">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold ${
+                              isAdmin
+                                ? "bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-100"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                            }`}>
+                              <Icon name={isAdmin ? "Shield" : "Users"} size={13} />
+                              {user.roleLabel || (isAdmin ? "مدير المتجر" : "عميل")}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 font-mono font-bold text-slate-800 dark:text-slate-200">
+                            {user.orders_count || 0}
+                          </td>
+
+                          <td className="py-3.5 font-mono font-bold text-slate-900 dark:text-slate-100">
+                            {(user.total_spent || 0).toLocaleString()} <span className="text-[10px] font-sans text-slate-400">ر.س</span>
+                          </td>
+
+                          <td className="py-3.5 text-slate-400 text-[11px]">
+                            {user.register_date || "2026-10-01"}
+                          </td>
+
+                          <td className="py-3.5 pl-5 text-left">
+                            <button
+                              onClick={() => handleToggleUserStatus(user.id)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-2xl text-[11px] font-bold transition-all ${
+                                user.is_active !== false
+                                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border border-emerald-200 dark:border-emerald-800/40"
+                                  : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-800/40"
+                              }`}
+                              title="انقر لتفعيل أو إيقاف الحساب"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${user.is_active !== false ? "bg-emerald-500" : "bg-rose-500"}`}></span>
+                              <span>{user.is_active !== false ? "نشط" : "موقوف"}</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // 3. STORE SETTINGS VIEW (الإعدادات العامة والربط)
+    // ==========================================
+    const SettingsView = ({ settings, setSettings, isLiveMode, connectionStatus, showToast }) => {
+      const [formData, setFormData] = useState({ ...settings });
+      const [isSaving, setIsSaving] = useState(false);
+
+      const handleChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+      };
+
+      const handleSave = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+          setSettings(formData);
+          localStorage.setItem('barakat_store_settings', JSON.stringify(formData));
+          if (isLiveMode) {
+            try {
+              await BarakatApi.updateSettings(formData);
+            } catch (err) {
+              console.warn("Backend settings update:", err.message);
+            }
+          }
+          showToast("تم حفظ جميع إعدادات المتجر بنجاح! 🟢");
+        } catch (err) {
+          showToast("حدث خطأ أثناء حفظ الإعدادات", "error");
+        } finally {
+          setIsSaving(false);
+        }
+      };
+
+      return (
+        <form onSubmit={handleSave} className="space-y-6 animate-fadeIn">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+                <span className="p-2 rounded-2xl bg-brand-500 text-white shadow-soft">
+                  <Icon name="Settings" size={24} />
+                </span>
+                إعدادات المتجر العامة والربط
+              </h2>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                تخصيص هوية المتجر، بوابات الدفع، خيارات الشحن، والاتصال بالخادم المباشر
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 transition-all shadow-soft hover:shadow-soft-hover disabled:opacity-50"
+            >
+              <Icon name="Save" size={16} />
+              <span>{isSaving ? "جارِ الحفظ..." : "حفظ التغييرات"}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* 1. STORE PROFILE */}
+            <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-6 border border-slate-100 dark:border-[#1F293D] shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <Icon name="Store" size={18} className="text-brand-500" />
+                هوية المتجر وبيانات الاتصال
+              </h3>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">اسم المتجر</label>
+                <input
+                  type="text"
+                  value={formData.store_name || ""}
+                  onChange={(e) => handleChange("store_name", e.target.value)}
+                  className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-bold text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">الوصف المختصر</label>
+                <input
+                  type="text"
+                  value={formData.store_tagline || ""}
+                  onChange={(e) => handleChange("store_tagline", e.target.value)}
+                  className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">هاتف المتجر</label>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={formData.store_phone || ""}
+                    onChange={(e) => handleChange("store_phone", e.target.value)}
+                    className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-mono font-bold text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">رقم الواتساب</label>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={formData.whatsapp_number || ""}
+                    onChange={(e) => handleChange("whatsapp_number", e.target.value)}
+                    className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-mono font-bold text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">البريد الإلكتروني</label>
+                  <input
+                    type="email"
+                    dir="ltr"
+                    value={formData.store_email || ""}
+                    onChange={(e) => handleChange("store_email", e.target.value)}
+                    className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">العملة الأساسية</label>
+                  <select
+                    value={formData.store_currency || "SAR"}
+                    onChange={(e) => handleChange("store_currency", e.target.value)}
+                    className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-bold text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                  >
+                    <option value="SAR">ريال سعودي (SAR / ر.س)</option>
+                    <option value="YER">ريال يمني (YER)</option>
+                    <option value="USD">دولار أمريكي (USD / $)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">اسم مستلم التحويلات البنكية</label>
+                <input
+                  type="text"
+                  value={formData.transfer_recipient_name || ""}
+                  onChange={(e) => handleChange("transfer_recipient_name", e.target.value)}
+                  className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* 2. SHIPPING & DELIVERY */}
+            <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-6 border border-slate-100 dark:border-[#1F293D] shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <Icon name="Truck" size={18} className="text-blue-500" />
+                سياسة الشحن والتوصيل
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">رسوم الشحن الافتراضية</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.shipping_fee || 25}
+                      onChange={(e) => handleChange("shipping_fee", parseFloat(e.target.value))}
+                      className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-mono font-bold text-slate-800 dark:text-slate-200 py-2.5 pl-12 pr-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                    />
+                    <span className="absolute left-3 top-2.5 text-xs text-slate-400">ر.س</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">الحد الأدنى للشحن المجاني</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.free_shipping_threshold || 200}
+                      onChange={(e) => handleChange("free_shipping_threshold", parseFloat(e.target.value))}
+                      className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-mono font-bold text-slate-800 dark:text-slate-200 py-2.5 pl-12 pr-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                    />
+                    <span className="absolute left-3 top-2.5 text-xs text-slate-400">ر.س</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">مدة التوصيل التقريبية</label>
+                <input
+                  type="text"
+                  value={formData.delivery_days || "2 - 4 أيام عمل"}
+                  onChange={(e) => handleChange("delivery_days", e.target.value)}
+                  className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none"
+                />
+              </div>
+
+              {/* PAYMENT TOGGLES */}
+              <div className="pt-2 space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">طرق الدفع المفعلة</h4>
+
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <Icon name="CreditCard" size={18} className="text-brand-500" />
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">الدفع عند الاستلام (COD)</p>
+                      <p className="text-[11px] text-slate-400">تحصيل المبلغ نقداً عند تسليم الطلب للعميل</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.enable_cod !== false}
+                    onChange={(e) => handleChange("enable_cod", e.target.checked)}
+                    className="rounded text-brand-500 focus:ring-brand-500 w-4 h-4 cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <Icon name="Server" size={18} className="text-emerald-500" />
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">محفظة الكريمي وبنك القطيبي</p>
+                      <p className="text-[11px] text-slate-400">إتاحة التحويل المباشر وتأكيد إشعار الدفع</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.enable_kuraimi !== false}
+                    onChange={(e) => handleChange("enable_kuraimi", e.target.checked)}
+                    className="rounded text-brand-500 focus:ring-brand-500 w-4 h-4 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </form>
+      );
+    };
+
+    // ==========================================
+    // 4. ORDERS MANAGEMENT VIEW (الطلبات)
+    // ==========================================
+    const OrdersView = ({ orders, onSelectOrder }) => {
+      const [searchQuery, setSearchQuery] = useState("");
+      const [statusFilter, setStatusFilter] = useState("all");
+
+      const filtered = useMemo(() => {
+        return orders.filter(o => {
+          const matchSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            o.customer.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchStatus = statusFilter === "all" || o.status === statusFilter;
+          return matchSearch && matchStatus;
+        });
+      }, [orders, searchQuery, statusFilter]);
+
+      const statusCounts = useMemo(() => {
+        return {
+          all: orders.length,
+          processing: orders.filter(o => o.status === "processing").length,
+          shipped: orders.filter(o => o.status === "shipped").length,
+          delivered: orders.filter(o => o.status === "delivered").length,
+          cancelled: orders.filter(o => o.status === "cancelled").length,
+        };
+      }, [orders]);
+
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+                <span className="p-2 rounded-2xl bg-brand-500 text-white shadow-soft">
+                  <Icon name="ShoppingCart" size={24} />
+                </span>
+                إدارة ومتابعة الطلبات
+              </h2>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                عرض تفاصيل الطلبات، تتبع حالة الشحن، وتحديث مراحل معالجة الطلب
+              </p>
+            </div>
+          </div>
+
+          {/* STATUS TABS */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+            {[
+              { id: "all", label: "كل الطلبات", count: statusCounts.all },
+              { id: "processing", label: "قيد المعالجة", count: statusCounts.processing },
+              { id: "shipped", label: "قيد الشحن", count: statusCounts.shipped },
+              { id: "delivered", label: "مكتملة", count: statusCounts.delivered },
+              { id: "cancelled", label: "ملغية", count: statusCounts.cancelled },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id)}
+                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  statusFilter === tab.id
+                    ? "bg-brand-500 text-white shadow-soft"
+                    : "bg-white dark:bg-[#131B2E] text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-800 hover:border-brand-500"
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                  statusFilter === tab.id ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* ORDERS TABLE */}
+          <div className="bg-white dark:bg-[#131B2E] rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/20">
+                    <th className="py-4 pr-5">رقم الطلب</th>
+                    <th className="py-4">العميل</th>
+                    <th className="py-4">طريقة الدفع</th>
+                    <th className="py-4">الحالة</th>
+                    <th className="py-4">الإجمالي</th>
+                    <th className="py-4">التاريخ</th>
+                    <th className="py-4 pl-5 text-left">الإجراء</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="py-12 text-center text-slate-400 font-medium">
+                        لا توجد طلبات مطابقة
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((order) => {
+                      const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+                      return (
+                        <tr
+                          key={order.id}
+                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+                          onClick={() => onSelectOrder(order)}
+                        >
+                          <td className="py-3.5 pr-5 font-mono font-bold text-slate-800 dark:text-slate-100">
+                            {order.id}
+                          </td>
+                          <td className="py-3.5">
+                            <p className="font-bold text-slate-800 dark:text-slate-200">{order.customer}</p>
+                            <p className="text-[11px] text-slate-400">{order.email}</p>
+                          </td>
+                          <td className="py-3.5 text-slate-600 dark:text-slate-400">
+                            {order.paymentMethod || "الدفع عند الاستلام"}
+                          </td>
+                          <td className="py-3.5">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${status.bg} ${status.text} ${status.border}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                              {order.statusLabel}
+                            </span>
+                          </td>
+                          <td className="py-3.5 font-mono font-bold text-slate-900 dark:text-slate-100">
+                            {order.total.toLocaleString()} <span className="text-[10px] text-slate-400 font-sans">ر.س</span>
+                          </td>
+                          <td className="py-3.5 text-slate-400 text-[11px]">
+                            {order.date}
+                          </td>
+                          <td className="py-3.5 pl-5 text-left">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectOrder(order);
+                              }}
+                              className="px-3.5 py-1.5 rounded-xl font-bold text-xs text-brand-600 bg-brand-50 hover:bg-brand-500 hover:text-white transition-colors"
+                            >
+                              عرض التفاصيل
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // 5. CATEGORIES VIEW (التصنيفات)
+    // ==========================================
+    const CategoriesView = ({ categories, showToast }) => {
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+                <span className="p-2 rounded-2xl bg-brand-500 text-white shadow-soft">
+                  <Icon name="Grid" size={24} />
+                </span>
+                تصنيفات المتجر
+              </h2>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                تصفح الأقسام الرئيسية والفرعية لمنتجات متجر بركة عدن
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {categories.map(cat => (
+              <div
+                key={cat.id}
+                className="bg-white dark:bg-[#131B2E] rounded-3xl p-5 border border-slate-100 dark:border-[#1F293D] shadow-sm hover:shadow-soft transition-all duration-300 group"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${cat.color || "from-brand-500 to-indigo-500"} text-white flex items-center justify-center shadow-soft`}>
+                    <Icon name={cat.icon || "Package"} size={22} />
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border border-emerald-200">
+                    نشط
+                  </span>
+                </div>
+                <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 group-hover:text-brand-500 transition-colors">
+                  {cat.name}
+                </h4>
+                <p className="text-xs text-slate-400 mt-1">
+                  {cat.itemsCount || 0} منتجاً مسجلاً
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // 6. DISCOUNTS VIEW (الخصومات والكوبونات)
+    // ==========================================
+    const DiscountsView = ({ discounts, showToast }) => {
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+              <span className="p-2 rounded-2xl bg-brand-500 text-white shadow-soft">
+                <Icon name="Percent" size={24} />
+              </span>
+              الخصومات والكوبونات الترويجية
+            </h2>
+            <p className="text-xs text-slate-400 font-medium mt-1">
+              إدارة أكواد الخصم، تحديد نسب التخفيض وتواريخ انتهاء العروض
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-[#131B2E] rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/20">
+                    <th className="py-4 pr-5">كود الكوبون</th>
+                    <th className="py-4">نوع الخصم</th>
+                    <th className="py-4">القيمة</th>
+                    <th className="py-4">مرات الاستخدام</th>
+                    <th className="py-4">تاريخ الانتهاء</th>
+                    <th className="py-4 pl-5 text-left">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                  {discounts.map(d => (
+                    <tr key={d.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3.5 pr-5 font-mono font-black text-brand-600 dark:text-brand-400 text-sm">
+                        {d.code}
+                      </td>
+                      <td className="py-3.5 text-slate-600 dark:text-slate-300">
+                        {d.type === "percent" ? "نسبة مئوية (%)" : "مبلغ ثابت (ر.س)"}
+                      </td>
+                      <td className="py-3.5 font-bold font-mono text-slate-800 dark:text-slate-100">
+                        {d.value} {d.type === "percent" ? "%" : "ر.س"}
+                      </td>
+                      <td className="py-3.5 font-mono text-slate-600 dark:text-slate-400">
+                        {d.used_count} / {d.max_usage}
+                      </td>
+                      <td className="py-3.5 text-slate-400">
+                        {d.expires_at}
+                      </td>
+                      <td className="py-3.5 pl-5 text-left">
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          d.status === "active"
+                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border border-emerald-200"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200"
+                        }`}>
+                          {d.status === "active" ? "ساري المفعول" : "منتهي"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // 7. CONTENT / MARKETING PLACEHOLDER VIEW
+    // ==========================================
+    const ContentSubView = ({ title, description, iconName = "FileText" }) => {
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+              <span className="p-2 rounded-2xl bg-brand-500 text-white shadow-soft">
+                <Icon name={iconName} size={24} />
+              </span>
+              {title}
+            </h2>
+            <p className="text-xs text-slate-400 font-medium mt-1">
+              {description}
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-12 border border-slate-100 dark:border-[#1F293D] shadow-sm text-center">
+            <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-900/30 text-brand-500 flex items-center justify-center mx-auto mb-4">
+              <Icon name={iconName} size={32} />
+            </div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-1">
+              قسم {title} جاهز ومتاح
+            </h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              يمكنك ربط وإدارة محتوى هذا القسم مباشرة من لوحة التحكم أو عبر الـ API.
+            </p>
+          </div>
+        </div>
+      );
+    };
+
+    // ==========================================
+    // Main App Component
+    // ==========================================
+    function App() {
+      // Theme state
+      const [darkMode, setDarkMode] = useState(false);
+      // Sidebar states
+      const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+      const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+      const [activeNav, setActiveNav] = useState("dashboard");
+      const [contentSubmenuOpen, setContentSubmenuOpen] = useState(false);
+
+      // API integration states
+      const [apiUrl, setApiUrl] = useState(BarakatApi.getBaseUrl());
+      const [connectionStatus, setConnectionStatus] = useState("connecting"); // 'connected' | 'demo' | 'connecting' | 'error'
+      const [isLiveMode, setIsLiveMode] = useState(false);
+      const [apiModalOpen, setApiModalOpen] = useState(false);
+      const [apiLoading, setApiLoading] = useState(false);
+      const [apiError, setApiError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+
+      // Real live data states
+      const [orders, setOrders] = useState(INITIAL_ORDERS);
+      const [products, setProducts] = useState(INITIAL_PRODUCTS);
+      const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+      const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+      const [settings, setSettings] = useState(INITIAL_SETTINGS);
+      const [discounts, setDiscounts] = useState(INITIAL_DISCOUNTS);
+      const [stats, setStats] = useState({
+        total_sales: 19253,
+        total_orders: 6,
+        total_customers: 6,
+        total_products: 17,
+        active_customers: 1,
+        new_customers: 1
+      });
+
+      const showToast = (message, type = "success") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+      };
+
+      // Fetch live data from Laravel Backend
+      const fetchLiveDashboardAndOrders = async (showSuccessToast = false) => {
+        setApiLoading(true);
+        setApiError(null);
+        try {
+          const [dashRes, ordersRes] = await Promise.all([
+            BarakatApi.getDashboard(),
+            BarakatApi.getOrders('all')
+          ]);
+
+          if (dashRes.data) {
+            setStats(prev => ({ ...prev, ...dashRes.data }));
+          }
+
+          if (ordersRes.data?.data) {
+            const formatted = ordersRes.data.data.map(formatApiOrder);
+            setOrders(formatted);
+          }
+
+          // Fetch products from live server
+          try {
+            const prodRes = await BarakatApi.getProducts();
+            const pList = prodRes.data?.data || prodRes.data;
+            if (Array.isArray(pList) && pList.length > 0) {
+              setProducts(pList.map(p => ({
+                id: p.id,
+                name: p.name,
+                category: p.category?.name || "عام",
+                price: parseFloat(p.price) || 0,
+                old_price: p.old_price ? parseFloat(p.old_price) : null,
+                stock: p.stock ?? 10,
+                is_active: p.is_active !== undefined ? Boolean(p.is_active) : true,
+                rating: p.rating || 4.8,
+                reviews_count: p.reviews_count || 12,
+                image: p.image || "https://images.unsplash.com/photo-1566174049881-81001826583c?w=500"
+              })));
+            }
+          } catch (e) {
+            console.log("Using initial products fallback");
+          }
+
+          // Fetch customers from live server
+          try {
+            const custRes = await BarakatApi.getCustomers();
+            if (custRes.data && Array.isArray(custRes.data)) {
+              setCustomers(custRes.data);
+            }
+          } catch (e) {
+            console.log("Using initial customers fallback");
+          }
+
+          // Fetch settings from live server
+          try {
+            const setRes = await BarakatApi.getSettings();
+            if (setRes.data) {
+              setSettings(prev => ({ ...prev, ...setRes.data }));
+            }
+          } catch (e) {
+            console.log("Using initial settings fallback");
+          }
+
+          setConnectionStatus("connected");
+          setIsLiveMode(true);
+          if (showSuccessToast) {
+            showToast("تم تحديث البيانات بنجاح من الخادم المباشر 🟢");
+          }
+        } catch (err) {
+          console.warn("API fetch error:", err);
+          setApiError(err.message);
+          setConnectionStatus("demo");
+          setIsLiveMode(false);
+        } finally {
+          setApiLoading(false);
+        }
+      };
+
+      // Auto-connect or auto-login on initial mount
+      useEffect(() => {
+        const initApi = async () => {
+          const token = BarakatApi.getToken();
+          if (token) {
+            await fetchLiveDashboardAndOrders(false);
+          } else {
+            // Attempt auto-login with default dev admin credentials
+            try {
+              await BarakatApi.login("admin@store.test", "password");
+              await fetchLiveDashboardAndOrders(false);
+            } catch (err) {
+              console.log("Auto-login fallback to demo mode:", err.message);
+              setConnectionStatus("demo");
+            }
+          }
+        };
+        initApi();
+      }, []);
+
+      const handleLogin = async (email, password) => {
+        setApiLoading(true);
+        setApiError(null);
+        try {
+          BarakatApi.setBaseUrl(apiUrl);
+          await BarakatApi.login(email, password);
+          await fetchLiveDashboardAndOrders(false);
+          setApiModalOpen(false);
+          showToast("تم تسجيل الدخول والربط بالخادم بنجاح! 🟢");
+        } catch (err) {
+          setApiError(err.message || "فشل تسجيل الدخول");
+        } finally {
+          setApiLoading(false);
+        }
+      };
+
+      const handleSwitchToDemo = () => {
+        setIsLiveMode(false);
+        setConnectionStatus("demo");
+        setOrders(INITIAL_ORDERS);
+        setProducts(INITIAL_PRODUCTS);
+        setCustomers(INITIAL_CUSTOMERS);
+        setCategories(INITIAL_CATEGORIES);
+        setSettings(INITIAL_SETTINGS);
+        setDiscounts(INITIAL_DISCOUNTS);
+        setStats({
+          total_sales: 19253,
+          total_orders: 6,
+          total_customers: 6,
+          total_products: 17,
+          active_customers: 1,
+          new_customers: 1
+        });
+        setApiModalOpen(false);
+        showToast("تم التبديل إلى وضع المعاينة التجريبي 🟡");
+      };
+
+      const handleLogout = () => {
+        BarakatApi.logout();
+        handleSwitchToDemo();
+        showToast("تم تسجيل الخروج");
+      };
+
+      const handleUpdateOrderStatus = async (order, newStatus) => {
+        setIsUpdatingOrder(true);
+        try {
+          if (isLiveMode && order.rawId) {
+            await BarakatApi.updateOrderStatus(order.rawId, newStatus);
+            // Refresh orders from server
+            const ordersRes = await BarakatApi.getOrders('all');
+            if (ordersRes.data?.data) {
+              setOrders(ordersRes.data.data.map(formatApiOrder));
+            }
+          } else {
+            // Update local state in demo mode
+            setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus, statusLabel: STATUS_CONFIG[newStatus]?.label || newStatus } : o));
+          }
+          setSelectedOrder(null);
+          showToast(`تم تحديث حالة الطلب ${order.id} بنجاح! 🟢`);
+        } catch (err) {
+          showToast(`فشل تحديث حالة الطلب: ${err.message}`, "error");
+        } finally {
+          setIsUpdatingOrder(false);
+        }
+      };
+
+      // Dashboard filters & interactions
+      const [chartPeriod, setChartPeriod] = useState("30");
+      const [isChartEmpty, setIsChartEmpty] = useState(false);
+      const [searchQuery, setSearchQuery] = useState("");
+      const [statusFilter, setStatusFilter] = useState("all");
+      const [selectedOrder, setSelectedOrder] = useState(null);
+      const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+      // Effect to toggle dark class
+      useEffect(() => {
+        if (darkMode) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      }, [darkMode]);
+
+      // Navigation Items matching the screenshot
+      const navItems = [
+        { id: "dashboard", label: "لوحة التحكم", icon: "LayoutDashboard" },
+        { id: "marketing", label: "التسويق", icon: "Megaphone" },
+        { id: "discounts", label: "الخصومات", icon: "Percent" },
+        { id: "orders", label: "الطلبات", icon: "ShoppingCart", badge: String(orders.length || 6) },
+        {
+          id: "content",
+          label: "المحتوى",
+          icon: "FileText",
+          hasSubmenu: true,
+          subItems: [
+            { id: "pages", label: "الصفحات" },
+            { id: "faqs", label: "الأسئلة الشائعة" },
+            { id: "notifs", label: "الإشعارات" },
+            { id: "banners", label: "البنرات" }
+          ]
+        },
+        { id: "products", label: "المنتجات", icon: "Package", badge: String(stats.total_products || 17) },
+        { id: "categories", label: "التصنيفات", icon: "Grid" },
+        { id: "settings", label: "الإعدادات", icon: "Settings" },
+        { id: "users", label: "المستخدمون", icon: "Users", badge: String(stats.total_customers || 2) },
+      ];
+
+      // Filtered orders
+      const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+          const matchSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.customer.includes(searchQuery) ||
+            order.total.toString().includes(searchQuery);
+          const matchStatus = statusFilter === "all" || order.status === statusFilter;
+          return matchSearch && matchStatus;
+        });
+      }, [orders, searchQuery, statusFilter]);
+
+      return (
+        <div className="min-h-screen bg-[#F6F7FB] dark:bg-[#0B0F19] transition-colors duration-300 flex">
+
+          {/* ======================================================== */}
+          {/* 1. RIGHT SIDEBAR (Collapsible & Mobile Drawer)          */}
+          {/* ======================================================== */}
+
+          {/* Mobile backdrop */}
+          {mobileSidebarOpen && (
+            <div
+              onClick={() => setMobileSidebarOpen(false)}
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+            />
+          )}
+
+          <aside
+            className={`fixed lg:sticky top-0 right-0 h-screen z-40 flex flex-col justify-between bg-white dark:bg-[#131B2E] border-l border-slate-100 dark:border-[#1F293D] transition-all duration-300 select-none shadow-sm ${sidebarCollapsed ? "w-20" : "w-64"
+              } ${mobileSidebarOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
+              }`}
+          >
+            {/* Sidebar Header */}
+            <div>
+              <div className="h-20 px-5 flex items-center justify-between border-b border-slate-100 dark:border-[#1F293D]">
+                <div className={`flex items-center gap-3 overflow-hidden ${sidebarCollapsed ? "justify-center w-full" : ""}`}>
+                  {/* Brand Logo Avatar */}
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-400 flex items-center justify-center text-white shadow-soft flex-shrink-0 animate-gentle">
+                    <Icon name="Store" size={22} />
+                  </div>
+                  {!sidebarCollapsed && (
+                    <div className="leading-tight">
+                      <h1 className="font-black text-lg text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-1.5">
+                        بركة عدن
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                      </h1>
+                      <span className="text-[11px] font-semibold text-slate-400">لوحة الإدارة الذكية</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop Collapse Button */}
+                {!sidebarCollapsed && (
+                  <button
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="hidden lg:flex p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    title="طي القائمة الجانبية"
+                  >
+                    <Icon name="ChevronRight" size={18} />
+                  </button>
+                )}
+              </div>
+
+              {/* Navigation Items */}
+              <nav className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-170px)]">
+                {sidebarCollapsed && (
+                  <div className="flex justify-center pb-2">
+                    <button
+                      onClick={() => setSidebarCollapsed(false)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-950 transition-colors"
+                      title="توسيع القائمة"
+                    >
+                      <Icon name="ChevronLeft" size={18} />
+                    </button>
+                  </div>
+                )}
+
+                {navItems.map((item) => {
+                  const isActive = activeNav === item.id;
+                  const isContent = item.id === "content";
+
+                  return (
+                    <div key={item.id}>
+                      <button
+                        onClick={() => {
+                          if (isContent) {
+                            setContentSubmenuOpen(!contentSubmenuOpen);
+                          } else {
+                            setActiveNav(item.id);
+                          }
+                          if (window.innerWidth < 1024 && !isContent) setMobileSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 group relative ${isActive
+                            ? "bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 shadow-sm"
+                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+                          } ${sidebarCollapsed ? "justify-center px-0" : "justify-between"}`}
+                        title={sidebarCollapsed ? item.label : ""}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`p-1.5 rounded-xl transition-colors ${isActive
+                                ? "bg-brand-500 text-white shadow-soft"
+                                : "text-slate-400 group-hover:text-brand-500"
+                              }`}
+                          >
+                            <Icon name={item.icon} size={18} />
+                          </span>
+                          {!sidebarCollapsed && <span>{item.label}</span>}
+                        </div>
+
+                        {!sidebarCollapsed && (
+                          <div className="flex items-center gap-1.5">
+                            {item.badge && (
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${isActive
+                                    ? "bg-brand-200/60 dark:bg-brand-800 text-brand-800 dark:text-brand-200"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                                  }`}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                            {item.hasSubmenu && (
+                              <Icon
+                                name="ChevronDown"
+                                size={14}
+                                className={`transition-transform duration-200 ${contentSubmenuOpen ? "rotate-180" : ""
+                                  }`}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Content Submenu */}
+                      {isContent && contentSubmenuOpen && !sidebarCollapsed && (
+                        <div className="mr-9 mt-1 space-y-1 border-r-2 border-slate-100 dark:border-slate-800 pr-2">
+                          {item.subItems.map((sub) => (
+                            <button
+                              key={sub.id}
+                              onClick={() => {
+                                setActiveNav(sub.id);
+                                if (window.innerWidth < 1024) setMobileSidebarOpen(false);
+                              }}
+                              className={`w-full text-right px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${activeNav === sub.id
+                                  ? "text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/30 font-bold"
+                                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                                }`}
+                            >
+                              • {sub.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Sidebar Bottom (Admin Profile card) */}
+            <div className="p-3 border-t border-slate-100 dark:border-[#1F293D]">
+              <div
+                className={`flex items-center gap-3 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 ${sidebarCollapsed ? "justify-center p-2" : ""
+                  }`}
+              >
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 text-white flex items-center justify-center font-bold text-sm shadow-soft">
+                    م
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-[#131B2E]"></span>
+                </div>
+                {!sidebarCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">مدير المتجر</p>
+                    <p className="text-[11px] text-slate-400 truncate">admin@store.test</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* ======================================================== */}
+          {/* 2. MAIN CONTENT AREA                                    */}
+          {/* ======================================================== */}
+          <main className="flex-1 min-w-0 flex flex-col min-h-screen">
+
+            {/* TOP HEADER */}
+            <header className="h-20 bg-white/80 dark:bg-[#131B2E]/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-100 dark:border-[#1F293D] px-4 sm:px-8 flex items-center justify-between gap-4">
+
+              {/* Right Side: Hamburger for mobile + Global Search */}
+              <div className="flex items-center gap-3 flex-1 max-w-md">
+                <button
+                  onClick={() => setMobileSidebarOpen(true)}
+                  className="lg:hidden p-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                >
+                  <Icon name="Menu" size={20} />
+                </button>
+
+                <div className="relative w-full">
+                  <span className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Icon name="Search" size={18} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="بحث سريع في الطلبات، المنتجات، العملاء..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 pl-4 pr-10 py-2.5 rounded-2xl border border-transparent focus:border-brand-500/30 focus:bg-white dark:focus:bg-[#131B2E] focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              {/* Left Side: Store Status, Notification, Dark Mode Toggle */}
+              <div className="flex items-center gap-3">
+
+                {/* Live Server Connection Badge / Button */}
+                <button
+                  onClick={() => setApiModalOpen(true)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border text-xs font-bold transition-all shadow-sm ${connectionStatus === 'connected'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'
+                      : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100'
+                    }`}
+                  title="إعدادات ربط السيرفر والـ API"
+                >
+                  <span className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                  <span className="hidden sm:inline">
+                    {connectionStatus === 'connected' ? 'متصل بالسيرفر المباشر 🟢' : 'وضع المعاينة (Demo) 🟡'}
+                  </span>
+                  <Icon name="Server" size={14} className="opacity-70" />
+                </button>
+
+                {/* Refresh Data Button */}
+                <button
+                  onClick={() => fetchLiveDashboardAndOrders(true)}
+                  disabled={apiLoading}
+                  className="p-2.5 rounded-2xl bg-[#F6F7FB] dark:bg-[#0B0F19] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors border border-slate-100 dark:border-slate-800"
+                  title="تحديث البيانات من السيرفر"
+                >
+                  <Icon name="RefreshCw" size={16} className={apiLoading ? "animate-spin text-brand-500" : ""} />
+                </button>
+
+                {/* Notifications Dropdown Toggle */}
+                <div className="relative">
+                  <button
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    className="relative p-2.5 rounded-2xl bg-[#F6F7FB] dark:bg-[#0B0F19] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors border border-slate-100 dark:border-slate-800"
+                  >
+                    <Icon name="Bell" size={18} />
+                    <span className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900"></span>
+                  </button>
+
+                  {/* Notifications Popup */}
+                  {notificationsOpen && (
+                    <div className="absolute left-0 mt-3 w-80 bg-white dark:bg-[#131B2E] rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-4 z-50 animate-fadeIn">
+                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">الإشعارات الأخيرة</span>
+                        <span className="text-[10px] text-brand-500 font-semibold cursor-pointer">تحديد الكل كمقروء</span>
+                      </div>
+                      <div className="space-y-2.5">
+                        <div className="flex items-start gap-2.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                          <span className="w-2 h-2 rounded-full bg-brand-500 mt-1.5 flex-shrink-0"></span>
+                          <div className="text-xs">
+                            <p className="font-bold text-slate-800 dark:text-slate-200">طلب جديد ORD-2026-00006</p>
+                            <p className="text-slate-400 text-[11px]">العميل أحمد محمد أتم طلب بقيمة 5,000 ر.س</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></span>
+                          <div className="text-xs">
+                            <p className="font-bold text-slate-800 dark:text-slate-200">مستخدم جديد مسجل</p>
+                            <p className="text-slate-400 text-[11px]">انضمت سارة القحطاني للمتجر حديثاً</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dark Mode Toggle */}
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2.5 rounded-2xl bg-[#F6F7FB] dark:bg-[#0B0F19] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors border border-slate-100 dark:border-slate-800"
+                  title={darkMode ? "التبديل إلى الوضع النهاري" : "التبديل إلى الوضع الليلي"}
+                >
+                  <Icon name={darkMode ? "Sun" : "Moon"} size={18} />
+                </button>
+              </div>
+            </header>
+
+            {/* DASHBOARD BODY CONTAINER */}
+            <div className="p-4 sm:p-8 space-y-8 flex-1">
+
+              {activeNav === "dashboard" && (
+                <>
+                  {/* PAGE TITLE & ACTION BUTTONS */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                        لوحة التحكم
+                      </h2>
+                  <p className="text-xs text-slate-400 font-medium mt-1">
+                    مرحباً بك مجدداً! إليك ملخص لأداء متجر "بركة عدن" اليوم.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsChartEmpty(!isChartEmpty)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-[#131B2E] border border-slate-200/80 dark:border-slate-800 hover:border-brand-500 hover:text-brand-500 transition-all shadow-sm"
+                  >
+                    <Icon name="Sparkles" size={15} className="text-brand-500" />
+                    <span>{isChartEmpty ? "عرض بيانات الرسم" : "تجربة الرسم الفارغ (Empty State)"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ======================================================== */}
+              {/* 3. TOP KPI CARDS (4 CARDS MATCHING SCREENSHOT)           */}
+              {/* ======================================================== */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+                {/* 1. إجمالي المبيعات */}
+                <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-5 border border-slate-100 dark:border-[#1F293D] shadow-soft hover:shadow-soft-hover transition-all duration-300 flex flex-col justify-between group">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي المبيعات</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800/40">
+                      <Icon name="TrendingUp" size={12} />
+                      100% عن الشهر الماضي
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <div>
+                      <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-mono tracking-tight">
+                        {(stats.total_sales !== undefined ? stats.total_sales : 19253).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        <span className="text-xs font-bold text-slate-400 mr-1.5 font-sans">ر.س</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-50 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 font-medium">معدل تحويل ممتاز</span>
+                    <Sparkline points={[7, 3, 4, 5, 6, 8, 9]} color="#10B981" fill="rgba(16, 185, 129, 0.12)" />
+                  </div>
+                </div>
+
+                {/* 2. عدد الطلبات */}
+                <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-5 border border-slate-100 dark:border-[#1F293D] shadow-soft hover:shadow-soft-hover transition-all duration-300 flex flex-col justify-between group">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">عدد الطلبات</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800/40">
+                      <Icon name="TrendingUp" size={12} />
+                      100% عن الشهر الماضي
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-mono tracking-tight">
+                      {stats.total_orders !== undefined ? stats.total_orders : orders.length}
+                      <span className="text-xs font-bold text-slate-400 mr-1.5 font-sans">طلبات</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-50 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 font-medium">مكتملة ومُعالجة</span>
+                    <Sparkline points={[3, 5, 4, 6, 5, 7, 8]} color="#6D5DF6" fill="rgba(109, 93, 246, 0.12)" />
+                  </div>
+                </div>
+
+                {/* 3. عدد المنتجات */}
+                <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-5 border border-slate-100 dark:border-[#1F293D] shadow-soft hover:shadow-soft-hover transition-all duration-300 flex flex-col justify-between group">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">عدد المنتجات</span>
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500">
+                      <Icon name="Package" size={16} />
+                    </div>
+                  </div>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-mono tracking-tight">
+                      {stats.total_products !== undefined ? stats.total_products : 17}
+                      <span className="text-xs font-bold text-slate-400 mr-1.5 font-sans">منتج</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-50 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 font-medium">متوفر في المتجر</span>
+                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-900/30">
+                      جاهز للطلب
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. عدد المستخدمين */}
+                <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-5 border border-slate-100 dark:border-[#1F293D] shadow-soft hover:shadow-soft-hover transition-all duration-300 flex flex-col justify-between group">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">عدد المستخدمين</span>
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-500">
+                      <Icon name="Users" size={16} />
+                    </div>
+                  </div>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-mono tracking-tight">
+                      {stats.total_customers !== undefined ? stats.total_customers : 6}
+                      <span className="text-xs font-bold text-slate-400 mr-1.5 font-sans">مستخدم</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-50 dark:border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 font-medium">عملاء مسجلون نشطون</span>
+                    <span className="text-[11px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-100 dark:border-amber-900/30">
+                      عميل مسجل
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ======================================================== */}
+              {/* 4. CHARTS SECTION (Area Chart & Donut Chart)             */}
+              {/* ======================================================== */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Sales Area Chart (2 Columns) */}
+                <div className="lg:col-span-2 bg-white dark:bg-[#131B2E] rounded-3xl p-6 border border-slate-100 dark:border-[#1F293D] shadow-soft flex flex-col justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        المبيعات - آخر {chartPeriod === '7' ? '7 أيام' : chartPeriod === '30' ? '30 يوماً' : '90 يوماً'}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">تحليل بياني لحجم المبيعات والإيرادات بالريال السعودي</p>
+                    </div>
+
+                    {/* Period Tabs */}
+                    <div className="flex items-center bg-[#F6F7FB] dark:bg-[#0B0F19] p-1 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      {[
+                        { id: "7", label: "7 أيام" },
+                        { id: "30", label: "30 يوماً" },
+                        { id: "90", label: "90 يوماً" },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => { setChartPeriod(tab.id); setIsChartEmpty(false); }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${chartPeriod === tab.id && !isChartEmpty
+                              ? "bg-white dark:bg-[#131B2E] text-brand-600 dark:text-brand-400 shadow-sm"
+                              : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                            }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <SalesAreaChart
+                    period={chartPeriod}
+                    isEmpty={isChartEmpty}
+                    onToggleEmpty={() => setIsChartEmpty(false)}
+                  />
+                </div>
+
+                {/* Donut Chart: Order Status Breakdown (1 Column) */}
+                <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-6 border border-slate-100 dark:border-[#1F293D] shadow-soft flex flex-col justify-between">
+                  <div className="mb-4">
+                    <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                      توزيع حالات الطلبات
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">نسبة الإنجاز ومعالجة طلبات العملاء</p>
+                  </div>
+
+                  <OrderStatusDonut orders={INITIAL_ORDERS} />
+
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
+                    <span>نسبة تسليم ناجحة</span>
+                    <span className="font-bold text-emerald-600 font-mono">100%</span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ======================================================== */}
+              {/* 5. TOP SELLING PRODUCTS & QUICK METRICS                 */}
+              {/* ======================================================== */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Most Sold Products List */}
+                <div className="lg:col-span-2 bg-white dark:bg-[#131B2E] rounded-3xl p-6 border border-slate-100 dark:border-[#1F293D] shadow-soft">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                        المنتجات الأكثر مبيعاً
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">أفضل الأصناف أداءً وإقبالاً في متجر بركة عدن</p>
+                    </div>
+                    <button className="text-xs font-bold text-brand-600 hover:text-brand-700 transition-colors">
+                      عرض الكل
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {TOP_PRODUCTS.map((prod, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group"
+                      >
+                        <img
+                          src={prod.image}
+                          alt={prod.name}
+                          className="w-13 h-13 w-12 h-12 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                              {prod.name}
+                            </h4>
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-200 font-mono flex-shrink-0">
+                              {prod.revenue.toLocaleString()} ر.س
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                            <span>{prod.category}</span>
+                            <span className="font-mono">{prod.sales} مبيعات</span>
+                          </div>
+                          {/* Progress bar */}
+                          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                            <div
+                              className="bg-brand-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${prod.percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick Info & Store Action Card */}
+                <div className="bg-gradient-to-br from-brand-600 to-indigo-700 rounded-3xl p-6 text-white shadow-soft flex flex-col justify-between relative overflow-hidden">
+                  <div className="absolute -top-12 -left-12 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-bold tracking-wide mb-4">
+                      <Icon name="Sparkles" size={13} />
+                      نصيحة تسويقية ذكية
+                    </span>
+                    <h3 className="text-lg font-black leading-snug mb-2">
+                      زيادة مبيعات عطلة نهاية الأسبوع في "بركة عدن"
+                    </h3>
+                    <p className="text-xs text-white/80 leading-relaxed">
+                      الفساتين والعبايات الكلاسيكية تسجل أعلى معدلات تصفح هذا الأسبوع. يمكنك إطلاق كوبون خصم 10% من قسم الخصومات لتحفيز التحويل.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-white/20 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] text-white/70">الطلبات الجاهزة للشحن</p>
+                      <p className="text-xl font-bold font-mono">2 طلبات</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveNav("orders")}
+                      className="px-4 py-2.5 rounded-xl bg-white text-brand-700 text-xs font-bold hover:bg-slate-100 transition-colors shadow-soft"
+                    >
+                      إدارة الطلبات
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ======================================================== */}
+              {/* 6. RECENT ORDERS TABLE (MATCHING EXACT SCREENSHOT)      */}
+              {/* ======================================================== */}
+              <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-6 border border-slate-100 dark:border-[#1F293D] shadow-soft">
+
+                {/* Table Header & Controls */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                      آخر الطلبات
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">قائمة تفصيلية بأحدث العمليات في المتجر</p>
+                  </div>
+
+                  {/* Search & Status Filter */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-semibold text-slate-700 dark:text-slate-300 py-2.5 px-4 pl-8 rounded-2xl border border-slate-100 dark:border-slate-800 focus:outline-none focus:border-brand-500 cursor-pointer"
+                      >
+                        <option value="all">كل الحالات</option>
+                        <option value="processing">قيد المعالجة</option>
+                        <option value="shipped">قيد الشحن</option>
+                        <option value="delivered">مكتمل</option>
+                        <option value="cancelled">ملغي</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold">
+                        <th className="pb-3.5 pr-4">رقم الطلب</th>
+                        <th className="pb-3.5">العميل</th>
+                        <th className="pb-3.5">الحالة</th>
+                        <th className="pb-3.5">الإجمالي</th>
+                        <th className="pb-3.5 pl-4 text-left">الإجراء</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                      {filteredOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="py-12 text-center text-slate-400">
+                            لا توجد طلبات تطابق معايير البحث
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredOrders.map((order) => {
+                          const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+                          const initials = order.customer
+                            .split(" ")
+                            .map(n => n[0])
+                            .slice(0, 2)
+                            .join("");
+
+                          return (
+                            <tr
+                              key={order.id}
+                              className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                              onClick={() => setSelectedOrder(order)}
+                            >
+                              {/* Order ID */}
+                              <td className="py-4 pr-4 font-mono font-bold text-slate-800 dark:text-slate-100">
+                                <span className="hover:text-brand-500 transition-colors">{order.id}</span>
+                              </td>
+
+                              {/* Customer */}
+                              <td className="py-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center text-xs">
+                                    {initials}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-slate-800 dark:text-slate-200">{order.customer}</p>
+                                    <p className="text-[10px] text-slate-400">{order.date}</p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Status Badge */}
+                              <td className="py-4">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${status.bg} ${status.text} ${status.border}`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                                  {order.statusLabel}
+                                </span>
+                              </td>
+
+                              {/* Total */}
+                              <td className="py-4 font-mono font-bold text-slate-900 dark:text-slate-100">
+                                {order.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                <span className="text-[11px] text-slate-400 mr-1 font-sans font-normal">ر.س</span>
+                              </td>
+
+                              {/* View Action */}
+                              <td className="py-4 pl-4 text-left">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
+                                  }}
+                                  className="px-3.5 py-1.5 rounded-xl font-bold text-xs text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-500 transition-all duration-200 shadow-sm"
+                                >
+                                  عرض
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+              </>
+              )}
+
+              {/* PRODUCTS VIEW */}
+              {activeNav === "products" && (
+                <ProductsView
+                  products={products}
+                  setProducts={setProducts}
+                  categories={categories}
+                  isLiveMode={isLiveMode}
+                  showToast={showToast}
+                />
+              )}
+
+              {/* USERS & CUSTOMERS VIEW */}
+              {activeNav === "users" && (
+                <UsersView
+                  customers={customers}
+                  setCustomers={setCustomers}
+                  showToast={showToast}
+                />
+              )}
+
+              {/* SETTINGS VIEW */}
+              {activeNav === "settings" && (
+                <SettingsView
+                  settings={settings}
+                  setSettings={setSettings}
+                  isLiveMode={isLiveMode}
+                  connectionStatus={connectionStatus}
+                  showToast={showToast}
+                />
+              )}
+
+              {/* ORDERS FULL VIEW */}
+              {activeNav === "orders" && (
+                <OrdersView
+                  orders={orders}
+                  onSelectOrder={setSelectedOrder}
+                />
+              )}
+
+              {/* CATEGORIES VIEW */}
+              {activeNav === "categories" && (
+                <CategoriesView
+                  categories={categories}
+                  showToast={showToast}
+                />
+              )}
+
+              {/* DISCOUNTS VIEW */}
+              {activeNav === "discounts" && (
+                <DiscountsView
+                  discounts={discounts}
+                  showToast={showToast}
+                />
+              )}
+
+              {/* MARKETING VIEW */}
+              {activeNav === "marketing" && (
+                <ContentSubView
+                  title="الحملات التسويقية"
+                  description="إدارة ومتابعة الحملات الإعلانية والعروض الترويجية لمتجر بركة عدن"
+                  iconName="Megaphone"
+                />
+              )}
+
+              {/* CONTENT PAGES SUBMENU VIEWS */}
+              {["pages", "faqs", "notifs", "banners", "content"].includes(activeNav) && (
+                <ContentSubView
+                  title={
+                    activeNav === "pages" ? "إدارة الصفحات الثابتة" :
+                    activeNav === "faqs" ? "الأسئلة الشائعة" :
+                    activeNav === "notifs" ? "إشعارات المتجر" :
+                    activeNav === "banners" ? "البنرات الإعلانية" : "إدارة المحتوى"
+                  }
+                  description="إدارة وتحديث محتوى متجر بركة عدن المعروض في التطبيق والموقع"
+                  iconName={activeNav === "notifs" ? "Bell" : "FileText"}
+                />
+              )}
+
+            </div>
+
+            {/* FOOTER */}
+            <footer className="px-8 py-4 border-t border-slate-100 dark:border-[#1F293D] text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <p>© 2026 متجر بركة عدن. جميع الحقوق محفوظة.</p>
+              <div className="flex items-center gap-4">
+                <span>الإصدار 2.4.0 SaaS</span>
+                <span>•</span>
+                <button
+                  onClick={() => setApiModalOpen(true)}
+                  className={`font-bold flex items-center gap-1.5 hover:underline ${connectionStatus === 'connected' ? 'text-emerald-500' : 'text-amber-500'
+                    }`}
+                  title="إعدادات الـ API"
+                >
+                  <span className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                  {connectionStatus === 'connected' ? 'الخادم متصل (127.0.0.1:8009)' : 'وضع المعاينة (انقر للربط المباشر)'}
+                </button>
+              </div>
+            </footer>
+
+          </main>
+
+          {/* ORDER DETAIL MODAL */}
+          <OrderModal
+            order={selectedOrder}
+            onClose={() => setSelectedOrder(null)}
+            onUpdateStatus={handleUpdateOrderStatus}
+            isUpdating={isUpdatingOrder}
+          />
+
+          {/* API CONFIG & LOGIN MODAL */}
+          <ApiConfigModal
+            isOpen={apiModalOpen}
+            onClose={() => setApiModalOpen(false)}
+            apiUrl={apiUrl}
+            setApiUrl={setApiUrl}
+            onLogin={handleLogin}
+            onSwitchToDemo={handleSwitchToDemo}
+            onLogout={handleLogout}
+            isLoggedIn={Boolean(BarakatApi.getToken())}
+            connectionStatus={connectionStatus}
+            errorMessage={apiError}
+            isLoading={apiLoading}
+          />
+
+          {/* FLOATING TOAST NOTIFICATION */}
+          <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+
+        </div>
+      );
+    }
+
+    // Render App
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>

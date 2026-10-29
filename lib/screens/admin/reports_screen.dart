@@ -54,7 +54,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
             icon: const Icon(Icons.download),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text('جاري تصدير التقرير...'),
                   backgroundColor: AppColors.primary,
                 ),
@@ -251,8 +251,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, Color(0xFF5B21B6)],
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryDark],
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
               ),
@@ -613,7 +613,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               ),
               Text(
                 '${item.sales.toStringAsFixed(0)} ر.ي',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -625,7 +625,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
           LinearProgressIndicator(
             value: item.percentage / 100,
             backgroundColor: AppColors.borderLight,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
           ),
@@ -704,7 +704,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
           const SizedBox(width: 12),
           Text(
             '${product.revenue.toStringAsFixed(0)} ر.ي',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
               color: AppColors.primary,
@@ -778,7 +778,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
             backgroundColor: AppColors.primary.withOpacity(0.1),
             child: Text(
               customer.name.substring(0, 1),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
@@ -812,7 +812,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
           ),
           Text(
             '${customer.totalSpent.toStringAsFixed(0)} ر.ي',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
               color: AppColors.primary,
@@ -843,7 +843,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.receipt, color: AppColors.primary, size: 20),
+            child: Icon(Icons.receipt, color: AppColors.primary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -870,7 +870,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
           ),
           Text(
             '${order.total.toStringAsFixed(0)} ر.ي',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.primary,

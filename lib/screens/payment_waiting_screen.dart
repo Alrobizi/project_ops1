@@ -122,7 +122,7 @@ class _PaymentWaitingScreenState extends ConsumerState<PaymentWaitingScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('تم تحويل طريقة الدفع إلى «الدفع عند الاستلام» بنجاح'),
           backgroundColor: AppColors.primary,
         ),
@@ -222,7 +222,7 @@ class _PaymentWaitingScreenState extends ConsumerState<PaymentWaitingScreen> {
             ),
             Column(
               children: [
-                const Icon(Icons.hourglass_top_rounded, color: AppColors.primary, size: 28),
+                Icon(Icons.hourglass_top_rounded, color: AppColors.primary, size: 28),
                 const SizedBox(height: 4),
                 Text(
                   _formatTimer(_secondsRemaining),
@@ -250,11 +250,11 @@ class _PaymentWaitingScreenState extends ConsumerState<PaymentWaitingScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.account_balance_wallet, color: AppColors.primary),
+                  Icon(Icons.account_balance_wallet, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Text(
                     'محفظة ${widget.walletName}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,

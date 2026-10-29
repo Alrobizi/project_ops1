@@ -64,6 +64,12 @@ class AdminProductController extends BaseApiController
             'sizes' => ['nullable', 'array'],
             'is_featured' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
+            // [الموقع الجغرافي] موقع البائع (واجهة إضافة منتج لدى البائع)
+            'seller_name' => ['nullable', 'string', 'max:255'],
+            'seller_governorate' => ['nullable', 'string', 'max:100'],
+            'seller_city' => ['nullable', 'string', 'max:100'],
+            'seller_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'seller_longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $validated['is_active'] = $validated['is_active'] ?? true;
@@ -89,6 +95,12 @@ class AdminProductController extends BaseApiController
             'sizes' => ['nullable', 'array'],
             'is_featured' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
+            // [الموقع الجغرافي] موقع البائع
+            'seller_name' => ['nullable', 'string', 'max:255'],
+            'seller_governorate' => ['nullable', 'string', 'max:100'],
+            'seller_city' => ['nullable', 'string', 'max:100'],
+            'seller_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'seller_longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $product->update($validated);

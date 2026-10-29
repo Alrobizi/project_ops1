@@ -6,11 +6,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/models.dart';
 import '../models/admin_models.dart';
 import '../models/notification.dart';
+import '../core/theme/app_colors.dart';
+import '../core/location/app_locations.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 import '../services/firebase_notification_service.dart';
 
 // ============================================
@@ -154,8 +158,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _authService.logout();
-    await _storage.delete(key: 'auth_token');
+    try {
+      await _authService.logout();
+    } catch (_) {}
+
+    try {
+      final googleSignIn = GoogleSignIn();
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.signOut();
+      }
+    } catch (_) {}
+
+    try {
+      await _storage.delete(key: 'auth_token');
+    } catch (_) {}
+
     state = AuthState();
   }
 
@@ -427,6 +444,14 @@ class ProductsState {
   final String? selectedSubcategoryId;
   final String searchQuery;
 
+  // ----- فلتر الموقع الجغرافي (اليمن - عدن افتراضياً + GPS) -----
+  // نقطة المرجع لفرز المنتجات حسب الأقرب (Nearest First)
+  final bool useGpsLocation;
+  final double userLatitude;
+  final double userLongitude;
+  final String filterGovernorate;
+  final String filterCity;
+
   ProductsState({
     this.products = const [],
     this.categories = const [],
@@ -436,6 +461,11 @@ class ProductsState {
     this.selectedCategoryId,
     this.selectedSubcategoryId,
     this.searchQuery = '',
+    this.useGpsLocation = false,
+    this.userLatitude = AppLocationDefaults.defaultLatitude,
+    this.userLongitude = AppLocationDefaults.defaultLongitude,
+    this.filterGovernorate = AppLocationDefaults.defaultGovernorate,
+    this.filterCity = AppLocationDefaults.defaultCity,
   });
 
   /// التصنيفات الرئيسية فقط (بدون الأقسام الفرعية)
@@ -470,16 +500,26 @@ class ProductsState {
     String? selectedCategoryId,
     String? selectedSubcategoryId,
     String? searchQuery,
+    bool? useGpsLocation,
+    double? userLatitude,
+    double? userLongitude,
+    String? filterGovernorate,
+    String? filterCity,
   }) =>
       ProductsState(
         products: products ?? this.products,
         categories: categories ?? this.categories,
         marketingSections: marketingSections ?? this.marketingSections,
         isLoading: isLoading ?? this.isLoading,
-        error: error ?? this.error,
+        error: error,
         selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
         selectedSubcategoryId: selectedSubcategoryId ?? this.selectedSubcategoryId,
         searchQuery: searchQuery ?? this.searchQuery,
+        useGpsLocation: useGpsLocation ?? this.useGpsLocation,
+        userLatitude: userLatitude ?? this.userLatitude,
+        userLongitude: userLongitude ?? this.userLongitude,
+        filterGovernorate: filterGovernorate ?? this.filterGovernorate,
+        filterCity: filterCity ?? this.filterCity,
       );
 }
 
@@ -529,6 +569,36 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     return state.getSubcategories(state.selectedCategoryId);
   }
 
+  /// تطبيق فلتر الموقع الجغرافي (يُستدعى من locationFilterProvider):
+  /// - عند تفعيل GPS: فرز المنتجات من الأقرب لموقع المشتري أولاً
+  /// - عند اختيار محافظة/مديرية: الفرز حسب المسافة من نقطة المركز
+  void applyLocationFilter({
+    required double? userLat,
+    required double? userLng,
+    required bool useGps,
+    required String governorate,
+    required String city,
+  }) {
+    state = state.copyWith(
+      useGpsLocation: useGps,
+      userLatitude: userLat ?? AppLocationDefaults.defaultLatitude,
+      userLongitude: userLng ?? AppLocationDefaults.defaultLongitude,
+      filterGovernorate: governorate,
+      filterCity: city,
+    );
+  }
+
+  /// المسافة بين موقع المشتري (GPS أو المدينة المختارة)
+  /// وموقع البائع لمنتج معين بالكيلومترات
+  double distanceToSeller(Product product) {
+    return LocationService.distanceKm(
+      state.userLatitude,
+      state.userLongitude,
+      product.sellerLatitude,
+      product.sellerLongitude,
+    );
+  }
+
   List<Product> get filteredProducts {
     var result = state.products;
 
@@ -559,6 +629,21 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
       ).toList();
     }
 
+    // ----- فرز حسب الموقع الجغرافي (Location Filter) -----
+    // المنتجات الأقرب لموقع المشتري (GPS أو المدينة المختارة) تظهر أولاً،
+    // ثم كسر التعادل بالتقييم الأعلى.
+    final userLat = state.userLatitude;
+    final userLng = state.userLongitude;
+    result = [...result]..sort((a, b) {
+        final distA = LocationService.distanceKm(
+            userLat, userLng, a.sellerLatitude, a.sellerLongitude);
+        final distB = LocationService.distanceKm(
+            userLat, userLng, b.sellerLatitude, b.sellerLongitude);
+        final cmp = distA.compareTo(distB);
+        if (cmp != 0) return cmp;
+        return b.rating.compareTo(a.rating);
+      });
+
     return result;
   }
 
@@ -571,6 +656,200 @@ final productsProvider = StateNotifierProvider<ProductsNotifier, ProductsState>(
     ref.watch(productServiceProvider),
     ref.watch(categoryServiceProvider),
   );
+});
+
+// ============================================
+// Location Filter State & Provider
+// فلتر الموقع الجغرافي (اليمن - عدن افتراضياً + GPS)
+// ============================================
+
+/// أنماط فلترة الموقع المدعومة:
+/// - [defaultCity]: الموقع الافتراضي (عدن - كريتر) أو مدينة مختارة
+/// - [gps]: موقع المستخدم الحالي عبر GPS (المنتجات الأقرب أولاً)
+enum LocationFilterMode { defaultCity, gps }
+
+class LocationFilterState {
+  final LocationFilterMode mode;
+  final String country;
+  final String governorate;
+  final String city;
+  final double latitude;
+  final double longitude;
+  final bool isLoading;
+  final String? error;
+
+  const LocationFilterState({
+    this.mode = LocationFilterMode.defaultCity,
+    this.country = AppLocationDefaults.country,
+    this.governorate = AppLocationDefaults.defaultGovernorate,
+    this.city = AppLocationDefaults.defaultCity,
+    this.latitude = AppLocationDefaults.defaultLatitude,
+    this.longitude = AppLocationDefaults.defaultLongitude,
+    this.isLoading = false,
+    this.error,
+  });
+
+  /// وسم الموقع كما يظهر في شريط الفلتر بالواجهة
+  String get label =>
+      mode == LocationFilterMode.gps ? 'موقعي الحالي (GPS)' : '$governorate - $city';
+
+  /// هل الفلتر على الوضع الافتراضي (عدن - كريتر) دون أي تخصيص؟
+  bool get isDefault =>
+      mode == LocationFilterMode.defaultCity &&
+      governorate == AppLocationDefaults.defaultGovernorate &&
+      city == AppLocationDefaults.defaultCity;
+
+  LocationFilterState copyWith({
+    LocationFilterMode? mode,
+    String? country,
+    String? governorate,
+    String? city,
+    double? latitude,
+    double? longitude,
+    bool? isLoading,
+    String? error,
+  }) =>
+      LocationFilterState(
+        mode: mode ?? this.mode,
+        country: country ?? this.country,
+        governorate: governorate ?? this.governorate,
+        city: city ?? this.city,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
+      );
+}
+
+/// مزود حالة فلتر الموقع:
+/// يبدأ من الموقع الافتراضي (اليمن - عدن - كريتر)، ويدعم
+/// "استخدام موقعي الحالي" عبر GPS، ومزامنة الفلتر مع المنتجات.
+class LocationFilterNotifier extends StateNotifier<LocationFilterState> {
+  final Ref _ref;
+
+  LocationFilterNotifier(this._ref) : super(const LocationFilterState()) {
+    _restoreSavedLocation();
+  }
+
+  /// استرجاع الموقع المحفوظ من آخر جلسة (أو الافتراضي عدن)
+  Future<void> _restoreSavedLocation() async {
+    try {
+      final saved = await LocationService.loadSavedLocation();
+      if (saved == null || saved.useGps) return; // الافتراضي: عدن - كريتر
+      state = LocationFilterState(
+        mode: LocationFilterMode.defaultCity,
+        governorate: saved.governorate,
+        city: saved.city,
+        latitude: saved.latitude,
+        longitude: saved.longitude,
+      );
+      _syncWithProducts();
+    } catch (_) {
+      // أي فشل يترك الحالة الافتراضية (عدن - كريتر)
+    }
+  }
+
+  /// تفعيل "استخدام موقعي الحالي" عبر GPS:
+  /// يطلب الإذن، يجلب الإحداثيات، ثم يفرز المنتجات حسب الأقرب.
+  Future<bool> useGpsLocation() async {
+    state = state.copyWith(isLoading: true, error: null);
+    final result = await LocationService.getCurrentPosition();
+
+    if (!result.success || result.position == null) {
+      state = state.copyWith(
+        isLoading: false,
+        error: result.errorMessage ?? 'تعذر تحديد الموقع',
+      );
+      return false;
+    }
+
+    final position = result.position!;
+    state = state.copyWith(
+      mode: LocationFilterMode.gps,
+      isLoading: false,
+      error: null,
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+    _syncWithProducts();
+
+    // حفظ نمط GPS (المدينة تبقى آخر مدينة مختارة للعرض)
+    await LocationService.persistLocation(
+      useGps: true,
+      governorate: state.governorate,
+      city: state.city,
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+    return true;
+  }
+
+  /// اختيار محافظة يمنية من القائمة المنسدلة (عدن أولاً)
+  Future<void> selectGovernorate(String name) async {
+    final location = AppLocationResolver.findGovernorate(name);
+    state = state.copyWith(
+      mode: LocationFilterMode.defaultCity,
+      governorate: location.name,
+      // عند اختيار محافظة نستخدم مركزها كنقطة مرجعية للفرز
+      city: location.name == AppLocationDefaults.defaultGovernorate
+          ? AppLocationDefaults.defaultCity
+          : location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      error: null,
+    );
+    _syncWithProducts();
+    await _persistCurrent();
+  }
+
+  /// اختيار مدينة/مديرية (مديريات عدن الثمانية)
+  Future<void> selectCity(String name) async {
+    final location = AppLocationResolver.findCity(name);
+    state = state.copyWith(
+      mode: LocationFilterMode.defaultCity,
+      city: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      error: null,
+    );
+    _syncWithProducts();
+    await _persistCurrent();
+  }
+
+  /// الرجوع للموقع الافتراضي: اليمن - عدن - كريتر
+  Future<void> resetToDefault() async {
+    state = const LocationFilterState();
+    _syncWithProducts();
+    await _persistCurrent();
+  }
+
+  Future<void> _persistCurrent() => LocationService.persistLocation(
+        useGps: state.mode == LocationFilterMode.gps,
+        governorate: state.governorate,
+        city: state.city,
+        latitude: state.latitude,
+        longitude: state.longitude,
+      );
+
+  /// مزامنة الفلتر مع مزود المنتجات (فرز الأقرب أولاً)
+  void _syncWithProducts() {
+    try {
+      _ref.read(productsProvider.notifier).applyLocationFilter(
+            userLat: state.latitude,
+            userLng: state.longitude,
+            useGps: state.mode == LocationFilterMode.gps,
+            governorate: state.governorate,
+            city: state.city,
+          );
+    } catch (_) {
+      // مزود المنتجات قد لا يكون جاهزاً بعد - يُتجاهل بأمان
+    }
+  }
+}
+
+final locationFilterProvider =
+    StateNotifierProvider<LocationFilterNotifier, LocationFilterState>((ref) {
+  return LocationFilterNotifier(ref);
 });
 
 // ============================================
@@ -603,13 +882,45 @@ class ThemeColorState {
 }
 
 class ThemeColorNotifier extends StateNotifier<ThemeColorState> {
-  ThemeColorNotifier() : super(ThemeColorState());
-
-  void setColor(Color color) {
-    state = state.copyWith(primaryColor: color);
+  ThemeColorNotifier() : super(ThemeColorState()) {
+    _loadThemeColor();
   }
 
-  void setAccent(Color color) {
+  /// تطبيق اللون المختار على ألوان العلامة التجارية العامة في AppColors
+  /// حتى تتغير كافة الأقسام والشاشات التي تستخدم هذه الألوان مباشرة
+  void _applyToAppColors(Color color) {
+    final hsl = HSLColor.fromColor(color);
+    AppColors.primary = color;
+    AppColors.primaryAccent = hsl
+        .withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0))
+        .toColor();
+    AppColors.secondaryAccent = hsl
+        .withLightness((hsl.lightness + 0.20).clamp(0.0, 1.0))
+        .toColor();
+  }
+
+  Future<void> _loadThemeColor() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final colorVal = prefs.getInt('app_primary_color');
+      if (colorVal != null) {
+        final color = Color(colorVal);
+        state = state.copyWith(primaryColor: color);
+        _applyToAppColors(color);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setColor(Color color) async {
+    state = state.copyWith(primaryColor: color);
+    _applyToAppColors(color);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('app_primary_color', color.toARGB32());
+    } catch (_) {}
+  }
+
+  Future<void> setAccent(Color color) async {
     state = state.copyWith(primaryAccent: color);
   }
 }
@@ -867,10 +1178,10 @@ class AdminNotifier extends StateNotifier<AdminState> {
         notifications: _dummyNotifications,
         faqs: _dummyFaqs,
         storeSettings: const StoreSettings(
-          name: 'متجر الإلكترونيات',
+          name: 'بركة عدن',
           email: 'info@store.com',
           phone: '777123456',
-          address: 'صنعاء، اليمن',
+          address: 'عدن، اليمن',
           description: 'متجر إلكتروني متخصص في المنتجات الإلكترونية',
           currency: 'YER',
           language: 'ar',
