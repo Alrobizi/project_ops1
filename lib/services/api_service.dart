@@ -3,26 +3,16 @@
 // جاهزة للربط مع Laravel API باستخدام Dio
 // ============================================
 
-import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/models.dart';
 import '../models/notification.dart';
 import '../data/dummy_data.dart';
 
 /// كلاس ApiClient يغلف Dio مع interceptor للتوكن
 class ApiClient {
-  /// IP السيرفر على الشبكة المحلية (للجوال الحقيقي المتصل بنفس الشبكة).
-  /// للمحاكي (Emulator) استبدل هذا الثابت بـ '10.0.2.2'.
-  static const String serverHost = '192.168.100.15';
-
-  static String get baseUrl {
-    if (!kIsWeb && Platform.isAndroid) {
-      // إذا كان يعمل على محاكي أندرويد
-      return 'http://10.0.2.2:8009/api';
-    }
-    return 'http://$serverHost:8009/api';
-  }
+  /// رابط السيرفر السحابي المباشر (Render)
+  static const String baseUrl = 'https://barakat-aden.onrender.com/api';
+  static const String serverUrl = 'https://barakat-aden.onrender.com';
 
   static const bool useDummyData =
       false; // تغيير إلى true للعمل بالبيانات التجريبية بدون سيرفر
