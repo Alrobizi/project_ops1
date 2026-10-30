@@ -12,7 +12,20 @@
           "package_name": "com.market.alrabizi_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "866528014908-mpg9bfum1jma7ms8tdl618r7ae2o0kt0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.market.alrabizi_app",
+            "certificate_hash": "f53c191019507588ea4b079d9dbde40c6c295e22"
+          }
+        },
+        {
+          "client_id": "866528014908-ubkmbauq5ffitlqvc1ffc37f0k92uff0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD45Hoch3tJHr6cTvYJ53BXZg8fK9KTpbY"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866528014908-ubkmbauq5ffitlqvc1ffc37f0k92uff0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
