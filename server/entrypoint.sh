@@ -13,7 +13,7 @@ php artisan storage:link || true
 # Run database migrations if DB_HOST is set
 if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     echo "Running database migrations on TiDB..."
-    php artisan migrate --force || echo "Migration warning: could not finish migrations."
+    php artisan migrate --force
 fi
 
 # Cache config & routes

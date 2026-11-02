@@ -203,8 +203,27 @@
     // Barakat Aden API Client (Laravel Backend)
     // ==========================================
     const BarakatApi = {
+      // مهلة أطول لأن خادم Render Free Tier ينام ويحتاج ~30 ثانية للإقلاع (cold start)
+      timeoutMs: 45000,
       getBaseUrl() {
-        return localStorage.getItem('barakat_api_url') || 'http://127.0.0.1:8009/api';
+        const isLocalHost = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(window.location.hostname)
+          || window.location.protocol === 'file:';
+        const stored = (localStorage.getItem('barakat_api_url') || '').trim().replace(/\/+$/, '');
+
+        if (stored) {
+          // تجاهل عنوان محلي محفوظ مسبقًا إذا كنا نعمل من سيرفر حقيقي (مشكلة شائعة بعد النشر)
+          const storedIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(stored);
+          if (storedIsLocal && !isLocalHost) {
+            localStorage.removeItem('barakat_api_url');
+          } else {
+            return stored;
+          }
+        }
+
+        if (isLocalHost) return 'http://127.0.0.1:8009/api';
+
+        // في الإنتاج: نفس أصل الصفحة + /api (يعمل مع أي دومين دون إعداد يدوي)
+        return `${window.location.origin}/api`;
       },
       setBaseUrl(url) {
         const clean = url.trim().replace(/\/+$/, '');
@@ -218,7 +237,7 @@
         if (token) localStorage.setItem('barakat_admin_token', token);
         else localStorage.removeItem('barakat_admin_token');
       },
-      async request(endpoint, options = {}) {
+      async request(endpoint, options = {}, attempt = 1) {
         const baseUrl = this.getBaseUrl();
         const token = this.getToken();
         const headers = {
@@ -228,7 +247,7 @@
           ...(options.headers || {})
         };
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7000);
+        const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
         try {
           const res = await fetch(`${baseUrl}${endpoint}`, {
@@ -247,8 +266,21 @@
           return data;
         } catch (err) {
           clearTimeout(timeoutId);
+
+          // خطأ شبكة/مهلة = غالبًا الخادم نائم (Render cold start) → نحاول مرة ثانية
+          const isNetworkError = err.name === 'AbortError'
+            || (err instanceof TypeError)
+            || err.message === 'Failed to fetch';
+          if (isNetworkError && attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            return this.request(endpoint, options, attempt + 1);
+          }
+
           if (err.name === 'AbortError') {
-            throw new Error('انتهت مهلة الاتصال بالخادم (تأكد من تشغيل السيرفر php artisan serve)');
+            throw new Error('انتهت مهلة الاتصال بالخادم — الخادم قد يكون في وضع الإيقاف المؤقت (Render). أعد المحاولة بعد نصف دقيقة.');
+          }
+          if (isNetworkError) {
+            throw new Error(`تعذّر الوصول إلى الخادم على ${baseUrl} — تحقق من العنوان في إعدادات الـ API أو انتظر إقلاع الخادم.`);
           }
           throw err;
         }
@@ -949,8 +981,8 @@
       errorMessage,
       isLoading
     }) => {
-      const [email, setEmail] = useState("admin@store.test");
-      const [password, setPassword] = useState("password");
+      const [email, setEmail] = useState("");
+      const [password, setPassword] = useState("");
 
       if (!isOpen) return null;
 
@@ -1002,7 +1034,7 @@
                 dir="ltr"
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="http://127.0.0.1:8009/api"
+                placeholder="https://barakat-aden.onrender.com/api"
                 className="w-full bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 py-2.5 px-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500"
               />
             </div>
@@ -2260,6 +2292,15 @@
       const [connectionStatus, setConnectionStatus] = useState("connecting"); // 'connected' | 'demo' | 'connecting' | 'error'
       const [isLiveMode, setIsLiveMode] = useState(false);
       const [apiModalOpen, setApiModalOpen] = useState(false);
+      // بيانات المستخدم المسجّل (تُحفظ في localStorage بعد تسجيل الدخول) — لعرضها في بطاقة البروفايل
+      const [adminUser, setAdminUser] = useState(() => {
+        try {
+          const raw = localStorage.getItem("barakat_admin_user");
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+          return null;
+        }
+      });
       const [apiLoading, setApiLoading] = useState(false);
       const [apiError, setApiError] = useState(null);
       const [toast, setToast] = useState(null);
@@ -2362,22 +2403,33 @@
         }
       };
 
-      // Auto-connect or auto-login on initial mount
+      // Auto-connect on initial mount (بدون تسجيل دخول تلقائي على السيرفر الحقيقي)
       useEffect(() => {
         const initApi = async () => {
           const token = BarakatApi.getToken();
           if (token) {
             await fetchLiveDashboardAndOrders(false);
-          } else {
-            // Attempt auto-login with default dev admin credentials
+            return;
+          }
+
+          // محليًا فقط: محاولة تسجيل دخول تلقائي بحساب التطوير الافتراضي
+          const isLocalDev = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(window.location.hostname);
+          if (isLocalDev) {
             try {
               await BarakatApi.login("admin@store.test", "password");
+              try {
+                setAdminUser(JSON.parse(localStorage.getItem("barakat_admin_user") || "null"));
+              } catch (e) { /* تجاهل */ }
               await fetchLiveDashboardAndOrders(false);
+              return;
             } catch (err) {
               console.log("Auto-login fallback to demo mode:", err.message);
-              setConnectionStatus("demo");
             }
           }
+
+          // على السيرفر الحقيقي: نطلب بيانات الدخول بدل الدخول التلقائي (ثغرة أمنية)
+          setConnectionStatus("demo");
+          setApiModalOpen(true);
         };
         initApi();
       }, []);
@@ -2387,7 +2439,8 @@
         setApiError(null);
         try {
           BarakatApi.setBaseUrl(apiUrl);
-          await BarakatApi.login(email, password);
+          const loginRes = await BarakatApi.login(email, password);
+          setAdminUser(loginRes?.data?.user || null);
           await fetchLiveDashboardAndOrders(false);
           setApiModalOpen(false);
           showToast("تم تسجيل الدخول والربط بالخادم بنجاح! 🟢");
@@ -2401,6 +2454,7 @@
       const handleSwitchToDemo = () => {
         setIsLiveMode(false);
         setConnectionStatus("demo");
+        setAdminUser(null);
         setOrders(INITIAL_ORDERS);
         setProducts(INITIAL_PRODUCTS);
         setCustomers(INITIAL_CUSTOMERS);
@@ -2656,14 +2710,18 @@
               >
                 <div className="relative flex-shrink-0">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 text-white flex items-center justify-center font-bold text-sm shadow-soft">
-                    م
+                    {(adminUser?.name || "مدير المتجر").trim().charAt(0)}
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-[#131B2E]"></span>
                 </div>
                 {!sidebarCollapsed && (
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">مدير المتجر</p>
-                    <p className="text-[11px] text-slate-400 truncate">admin@store.test</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                      {adminUser?.name || "مدير المتجر"}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {adminUser?.email || (isLiveMode ? "متصل بالخادم" : "وضع المعاينة التجريبي")}
+                    </p>
                   </div>
                 )}
               </div>
@@ -3268,7 +3326,7 @@
                   title="إعدادات الـ API"
                 >
                   <span className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                  {connectionStatus === 'connected' ? 'الخادم متصل (127.0.0.1:8009)' : 'وضع المعاينة (انقر للربط المباشر)'}
+                  {connectionStatus === 'connected' ? `الخادم متصل (${BarakatApi.getBaseUrl()})` : 'وضع المعاينة (انقر للربط المباشر)'}
                 </button>
               </div>
             </footer>

@@ -4,6 +4,7 @@
 // ============================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,7 @@ import '../models/models.dart';
 import '../models/admin_models.dart';
 import '../models/notification.dart';
 import '../core/theme/app_colors.dart';
+import '../core/auth/google_auth_config.dart';
 import '../core/location/app_locations.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
@@ -125,19 +127,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginWithGoogle() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: ['email', 'profile'],
-        serverClientId: '866528014908-ubkmbauq5ffitlqvc1ffc37f0k92uff0.apps.googleusercontent.com',
-      );
-
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      final GoogleSignInAccount? googleUser =
+          await _createGoogleSignIn().signIn();
 
       if (googleUser == null) {
+        // المستخدم أغلق نافذة Google دون اختيار حساب
         state = state.copyWith(isLoading: false);
         return;
       }
 
+      // الحصول على بيانات التحقق التي سيتأكد منها الخادم لدى Google.
+      // على الويب تكون القيمة المتوفرة عادةً هي accessToken،
+      // وعلى أندرويد/iOS يكون idToken متوفراً.
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
+
+      if (idToken == null && accessToken == null) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'تعذر الحصول على بيانات التحقق من Google، حاول مرة أخرى',
+        );
+        return;
+      }
+
       final user = await _authService.loginWithGoogle(
+        idToken: idToken,
+        accessToken: accessToken,
         email: googleUser.email,
         name: googleUser.displayName ?? googleUser.email.split('@').first,
         googleId: googleUser.id,
@@ -150,6 +168,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
         isAuthenticated: true,
       );
+      FirebaseNotificationService.syncToken();
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -158,13 +177,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// إنشاء نسخة GoogleSignIn بإعدادات صحيحة لكل منصة.
+  ///
+  /// على الويب لا تدعم الحزمة serverClientId إطلاقاً (تُطلق خطأ)،
+  /// ويجب تمرير clientId أو وجود وسم
+  /// <meta name="google-signin-client_id"> في index.html.
+  /// على أندرويد/iOS يُستخدم serverClientId ليكون معرّف توكن Google
+  /// موجّهاً لخادمنا (Web client ID).
+  GoogleSignIn _createGoogleSignIn() {
+    return GoogleSignIn(
+      clientId: kIsWeb ? GoogleAuthConfig.webClientId : null,
+      serverClientId: kIsWeb ? null : GoogleAuthConfig.webClientId,
+      scopes: GoogleAuthConfig.scopes,
+    );
+  }
+
   Future<void> logout() async {
     try {
       await _authService.logout();
     } catch (_) {}
 
     try {
-      final googleSignIn = GoogleSignIn();
+      final googleSignIn = _createGoogleSignIn();
       if (await googleSignIn.isSignedIn()) {
         await googleSignIn.signOut();
       }

@@ -233,6 +233,8 @@ class AuthService {
 
   /// تسجيل الدخول بواسطة Google
   Future<User> loginWithGoogle({
+    String? idToken,
+    String? accessToken,
     required String email,
     required String name,
     required String googleId,
@@ -244,6 +246,11 @@ class AuthService {
     }
 
     final response = await _apiClient.post('/google-login', data: {
+      // بيانات التحقق التي يعتمد عليها الخادم (يتحقق منها مع Google مباشرة).
+      // على أندرويد/iOS يكون id_token متوفراً، وعلى الويب يكون access_token.
+      if (idToken != null) 'id_token': idToken,
+      if (accessToken != null) 'access_token': accessToken,
+      // حقول إضافية للتوافق مع نسخ الخادم الأقدم — الخادم الحالي يتجاهلها
       'email': email,
       'name': name,
       'google_id': googleId,

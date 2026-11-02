@@ -393,7 +393,7 @@ class AdminController extends Controller
             ->select(
                 'products.name',
                 DB::raw('SUM(order_items.quantity) as units_sold'),
-                DB::raw('SUM(order_items.total_price) as revenue'),
+                DB::raw('SUM(order_items.price * order_items.quantity) as revenue'),
                 'products.stock'
             )
             ->groupBy('products.id', 'products.name', 'products.stock')
