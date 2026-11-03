@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
+import '../models/models.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
 
@@ -85,6 +86,11 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            // صلاحيات لوحة التحكم — تظهر للأدمن فقط
+            if (user != null && user.canAccessAdminPanel) ...[
+              const SizedBox(height: 16),
+              _AdminPermissionsCard(permissions: user.adminPermissions),
+            ],
             const SizedBox(height: 24),
             // قائمة الخيارات
             _MenuSection(
@@ -440,3 +446,88 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 }
+
+/// بطاقة تعرض أقسام لوحة التحكم الممنوحة للمستخدم الإداري.
+class _AdminPermissionsCard extends StatelessWidget {
+  final List<String> permissions;
+
+  const _AdminPermissionsCard({required this.permissions});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.verified_user_outlined,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'صلاحياتك الإدارية',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+              Text(
+                '${permissions.length} قسم',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondaryLight,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (permissions.isEmpty)
+            const Text(
+              'لم تُمنح لك أي أقسام بعد — تواصل مع مدير المتجر لمنحك الصلاحيات.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondaryLight,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: permissions.map((permission) {
+                final label =
+                    User.adminPermissionLabels[permission] ?? permission;
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+

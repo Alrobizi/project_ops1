@@ -9,11 +9,26 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/app_providers.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // تحديث بيانات المستخدم وصلاحياته عند فتح لوحة التحكم
+    // حتى لا تظهر الأقسام ناقصة بسبب جلسة قديمة.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authProvider.notifier).refreshUser();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final adminState = ref.watch(adminProvider);
     final authState = ref.watch(authProvider);
     final user = authState.user;

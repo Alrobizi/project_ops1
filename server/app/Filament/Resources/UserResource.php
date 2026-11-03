@@ -62,13 +62,18 @@ class UserResource extends Resource
                     ->default('customer')
                     ->live(),
 
-                Forms\Components\CheckboxList::make('admin_permissions')
-                    ->label('أقسام لوحة التحكم المسموحة')
-                    ->options(User::ADMIN_PERMISSIONS_LABELS)
-                    ->columns(2)
-                    ->helperText('افتراضياً بدون أي صلاحيات — حدد الأقسام التي تريد منحها لهذا الأدمن')
-                    ->visible(fn (Forms\Get $get): bool => $get('role') === 'admin')
-                    ->dehydrated(fn (Forms\Get $get): bool => $get('role') === 'admin'),
+                Forms\Components\Section::make('صلاحيات لوحة التحكم')
+                    ->description('تُمنح الأقسام صراحةً لكل أدمن — الأدمن الذي لا يملك أي قسم محدد لن يظهر له أي شيء في اللوحة.')
+                    ->schema([
+                        Forms\Components\CheckboxList::make('admin_permissions')
+                            ->label('أقسام لوحة التحكم المسموحة')
+                            ->options(User::ADMIN_PERMISSIONS_LABELS)
+                            ->columns(2)
+                            ->bulkToggleable()
+                            ->disabled(fn (Forms\Get $get): bool => $get('role') !== 'admin')
+                            ->helperText('اختر الدور «أدمن» أولاً لتمكين التحديد. تُطبَّق التغييرات بعد تحديث بيانات المستخدم في التطبيق.')
+                            ->dehydrated(fn (Forms\Get $get): bool => $get('role') === 'admin'),
+                    ]),
 
                 Forms\Components\TextInput::make('password')
                     ->label('كلمة المرور')
@@ -169,6 +174,12 @@ class UserResource extends Resource
                     ->icon('heroicon-o-shield-check')
                     ->color('warning')
                     ->requiresConfirmation()
+                    ->modalHeading(fn (User $record): string => $record->role === 'admin'
+                        ? 'تحويل المستخدم إلى عميل'
+                        : 'تحويل المستخدم إلى أدمن')
+                    ->modalDescription(fn (User $record): string => $record->role === 'admin'
+                        ? 'سيتم إلغاء وصول هذا المستخدم إلى لوحة التحكم.'
+                        : 'لن تُمنح له أي صلاحية تلقائياً — حدّد الأقسام المسموحة من صفحة تعديل المستخدم بعد التحويل.')
                     ->action(fn (User $record) => $record->update([
                         'role' => $record->role === 'admin' ? 'customer' : 'admin',
                     ])),

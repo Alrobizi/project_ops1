@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart' show DioException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -70,10 +71,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _checkAuthStatus() async {
     final token = await _storage.read(key: 'auth_token');
-    if (token != null) {
-      _authService.setToken(token);
-      state = state.copyWith(isAuthenticated: true);
-      FirebaseNotificationService.syncToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    _authService.setToken(token);
+    state = state.copyWith(isAuthenticated: true);
+    FirebaseNotificationService.syncToken();
+
+    // استعادة بيانات المستخدم نفسها (وليس التوكن فقط) حتى لا تختفي
+    // صلاحيات لوحة التحكم عند إعادة تشغيل التطبيق.
+    await refreshUser();
+  }
+
+  /// إعادة تحميل بيانات المستخدم الحالي وصلاحياته من الخادم.
+  /// تُستدعى عند بدء التشغيل (استعادة الجلسة) ويمكن استدعاؤها بعد
+  /// تعديل الصلاحيات من لوحة التحكم.
+  Future<void> refreshUser() async {
+    if (!state.isAuthenticated) {
+      return;
+    }
+
+    try {
+      final user = await _authService.getCurrentUser();
+      state = state.copyWith(user: user, isAuthenticated: true);
+    } on DioException catch (e) {
+      // التوكن منتهٍ أو ملغى => إنهاء الجلسة المحلية
+      if (e.response?.statusCode == 401) {
+        try {
+          await _storage.delete(key: 'auth_token');
+        } catch (_) {}
+        _authService.clearToken();
+        state = AuthState();
+      }
+      // أخطاء الشبكة المؤقتة: نُبقي الجلسة ونكمل بالبيانات المتاحة
+    } catch (_) {
+      // نتجاهل أي خطأ آخر (تعذّر الاتصال...) ونُبقي الجلسة
     }
   }
 

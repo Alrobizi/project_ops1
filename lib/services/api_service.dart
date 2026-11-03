@@ -49,6 +49,9 @@ class ApiClient {
   void setToken(String token) => _token = token;
   void clearToken() => _token = null;
 
+  /// التوكن الحالي (يُستخدم عند استعادة بيانات المستخدم بعد إعادة التشغيل)
+  String? get token => _token;
+
   // GET request
   Future<Response> get(String path, {Map<String, dynamic>? queryParams}) async {
     return await _dio.get(path, queryParameters: queryParams);
@@ -204,6 +207,23 @@ class AuthService {
 
   /// تعيين توكن المصادقة يدوياً (عند استعادة الجلسة)
   void setToken(String token) => _apiClient.setToken(token);
+
+  /// حذف توكن المصادقة (عند انتهاء الجلسة أو رفض التوكن)
+  void clearToken() => _apiClient.clearToken();
+
+  /// جلب بيانات المستخدم الحالي من الخادم.
+  /// تشمل `role` و`admin_permissions`، لذلك تُستخدم لاستعادة الصلاحيات
+  /// بعد إعادة تشغيل التطبيق بدلاً من الاعتماد على التوكن وحده.
+  Future<User> getCurrentUser() async {
+    if (ApiClient.useDummyData) {
+      return DummyData.currentUser;
+    }
+
+    final response = await _apiClient.get('/user');
+    final userJson = Map<String, dynamic>.from(response.data['data']);
+    userJson['token'] = _apiClient.token;
+    return User.fromJson(userJson);
+  }
 
   /// إنشاء حساب
   Future<User> register({

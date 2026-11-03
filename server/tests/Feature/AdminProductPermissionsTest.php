@@ -238,4 +238,24 @@ class AdminProductPermissionsTest extends TestCase
             ->getJson('/api/admin/customers')
             ->assertStatus(403);
     }
+
+    public function test_admin_with_null_permissions_has_access_to_nothing(): void
+    {
+        // أدمن قديم لم تُحدَّد صلاحياته (null) — لا يُعتبر وصولاً كاملاً
+        $admin = User::create([
+            'name' => 'أدمن بصلاحيات غير محددة',
+            'email' => 'null.permissions@store.test',
+            'phone' => '700000012',
+            'role' => 'admin',
+            'admin_permissions' => null,
+            'password' => bcrypt('password'),
+        ]);
+
+        $this->actingAs($admin);
+
+        $this->assertFalse($admin->hasAdminPermission('products'));
+        $this->assertFalse($admin->hasAllAdminPermissions());
+        $this->assertFalse(\App\Filament\Resources\ProductResource::canAccess());
+        $this->assertFalse(\App\Filament\Resources\UserResource::canAccess());
+    }
 }

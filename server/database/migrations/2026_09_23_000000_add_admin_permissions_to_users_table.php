@@ -10,7 +10,7 @@ return new class extends Migration
      * صلاحيات لوحة التحكم للمستخدمين من نوع admin.
      * القيمة مصفوفة JSON من مفاتيح الأقسام المسموحة:
      * products, orders, customers, discounts, reports, content, marketing, settings, users
-     * المصفوفة الفارغة تعني وصول كامل (مدير متجر رئيسي).
+     * المصفوفة الفارغة أو null تعني عدم منح أي صلاحية (كل قسم يُمنح صراحةً).
      */
     public function up(): void
     {
