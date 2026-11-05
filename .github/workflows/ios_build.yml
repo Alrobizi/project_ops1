@@ -1,12 +1,7 @@
-name: iOS Build & TestFlight
+name: iOS Build & IPA
 
 on:
   workflow_dispatch:
-    inputs:
-      build_number:
-        description: 'Build Number'
-        required: false
-        default: '1'
   push:
     branches:
       - main
@@ -18,9 +13,9 @@ on:
 
 jobs:
   build:
-    name: Build iOS IPA
+    name: Build iOS IPA Package
     runs-on: macos-14
-    timeout-minutes: 60
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -32,21 +27,27 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Flutter dependencies
-        run: flutter pub get
-
-      - name: Install CocoaPods dependencies
+      - name: Install Dependencies
         run: |
+          flutter pub get
           cd ios
           pod install --repo-update
           cd ..
 
-      - name: Build iOS Archive / IPA
+      - name: Build iOS Application
         run: |
-          flutter build ipa --release --no-codesign
+          flutter build ios --release --no-codesign
 
-      - name: Upload Build Artifact
+      - name: Package into IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r barakat_aden.ipa Payload
+          cd ../../..
+
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-runner-archive
-          path: build/ios/archive/Runner.xcarchive
+          name: barakat-aden-ios-ipa
+          path: build/ios/iphoneos/barakat_aden.ipa
