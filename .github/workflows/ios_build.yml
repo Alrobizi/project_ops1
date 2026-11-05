@@ -28,11 +28,7 @@ jobs:
           cache: true
 
       - name: Install Dependencies
-        run: |
-          flutter pub get
-          cd ios
-          pod install --repo-update
-          cd ..
+        run: flutter pub get
 
       - name: Build iOS Application
         run: |
