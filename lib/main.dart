@@ -18,8 +18,17 @@ Future<void> main() async {
   // ربط ApiClient بخدمة الإشعارات لإرسال توكن FCM للسيرفر
   setFcmApiClient(ApiClient());
 
-  // تهيئة Firebase والإشعارات
-  await FirebaseNotificationService.initialize();
+  // تهيئة Firebase والإشعارات بأمان تام دون تعطيل تشغيل التطبيق
+  try {
+    await FirebaseNotificationService.initialize().timeout(
+      const Duration(seconds: 3),
+      onTimeout: () {
+        debugPrint('⚠️ Firebase initialization timed out, continuing to runApp');
+      },
+    );
+  } catch (e, stack) {
+    debugPrint('⚠️ Firebase initialization error (ignored to ensure UI runs): $e');
+  }
 
   runApp(
     // ProviderScope مطلوب لـ Riverpod

@@ -39,6 +39,7 @@ jobs:
           cd build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
+          cp -f ../../../ios/Runner/GoogleService-Info.plist Payload/Runner.app/GoogleService-Info.plist || true
           zip -r barakat_aden.ipa Payload
           cd ../../..
 

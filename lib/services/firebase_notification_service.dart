@@ -38,8 +38,12 @@ class FirebaseNotificationService {
 
   /// تهيئة Firebase
   static Future<void> initialize() async {
-    await Firebase.initializeApp();
-    await _setupMessaging();
+    try {
+      await Firebase.initializeApp();
+      await _setupMessaging();
+    } catch (e) {
+      debugPrint('⚠️ FirebaseNotificationService.initialize error: $e');
+    }
   }
 
   /// إعداد الإشعارات
@@ -98,7 +102,20 @@ class FirebaseNotificationService {
   /// الحصول على توكن FCM وإرساله للسيرفر
   static Future<void> _getToken() async {
     try {
-      _fcmToken = await _messaging.getToken();
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final apns = await _messaging.getAPNSToken().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () => null,
+        );
+        if (apns == null) {
+          debugPrint('⚠️ APNs token not available on iOS (sideloaded/simulator). Skipping FCM token.');
+          return;
+        }
+      }
+      _fcmToken = await _messaging.getToken().timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => null,
+      );
       debugPrint('🔑 FCM Token: $_fcmToken');
       if (_fcmToken != null) {
         await _sendTokenToServer(_fcmToken!);
