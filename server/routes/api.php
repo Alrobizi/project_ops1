@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // العملاء (صلاحية: customers)
     Route::middleware('permission:customers')->group(function () {
         Route::get('/admin/customers', [AdminController::class, 'customers']);
+        Route::put('/admin/customers/{id}', [AdminController::class, 'updateCustomer']);
         Route::patch('/admin/customers/{id}/toggle', [AdminController::class, 'toggleCustomerStatus']);
     });
 

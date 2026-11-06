@@ -348,10 +348,13 @@ class AdminController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'role' => $user->role,
+                    'admin_permissions' => $user->admin_permissions ?? [],
+                    'is_blocked' => (bool)$user->is_blocked,
                     'register_date' => $user->created_at->toDateString(),
                     'orders_count' => $user->orders_count,
                     'total_spent' => $user->orders_sum_total ?? 0,
-                    'is_active' => true,
+                    'is_active' => !$user->is_blocked,
                     'is_vip' => ($user->orders_sum_total ?? 0) > 5000,
                     'is_new' => $user->created_at->gt(now()->subDays(30)),
                 ];
@@ -363,8 +366,47 @@ class AdminController extends Controller
     public function toggleCustomerStatus($id)
     {
         $user = User::findOrFail($id);
-        // يمكن إضافة حقل is_active لجدول المستخدمين
-        return response()->json(['message' => 'تم تحديث حالة العميل']);
+        $user->is_blocked = !$user->is_blocked;
+        $user->save();
+        return response()->json(['message' => 'تم تحديث حالة المستخدم بنجاح', 'is_blocked' => $user->is_blocked]);
+    }
+
+    public function updateCustomer(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $validated = $request->validate([
+            'role' => 'nullable|string|in:admin,customer',
+            'admin_permissions' => 'nullable|array',
+            'admin_permissions.*' => 'string',
+            'is_blocked' => 'nullable|boolean',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        if (isset($validated['role'])) {
+            $user->role = $validated['role'];
+        }
+        if (array_key_exists('admin_permissions', $validated)) {
+            $user->admin_permissions = ($user->role === 'admin') ? ($validated['admin_permissions'] ?? []) : null;
+        }
+        if (isset($validated['is_blocked'])) {
+            $user->is_blocked = $validated['is_blocked'];
+        }
+        if (!empty($validated['password'])) {
+            $user->password = $validated['password'];
+        }
+        $user->save();
+
+        return response()->json([
+            'message' => 'تم تحديث صلاحيات المستخدم بنجاح',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'admin_permissions' => $user->admin_permissions ?? [],
+                'is_blocked' => (bool)$user->is_blocked,
+            ]
+        ]);
     }
 
     // ============================================

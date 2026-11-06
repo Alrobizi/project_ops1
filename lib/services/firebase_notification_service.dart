@@ -6,6 +6,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../app_router.dart';
 import 'api_service.dart';
 
 /// ApiClient عام لإرسال توكن FCM للسيرفر
@@ -51,7 +53,7 @@ class FirebaseNotificationService {
     // معالج الإشعارات في الخلفية
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // طلب إذن الإشعارات
+    // طلب إذن الإشعارات وتفعيل خيارات الواجهة
     await _requestPermission();
 
     // الحصول على التوكن
@@ -59,7 +61,7 @@ class FirebaseNotificationService {
 
     // الاستماع للإشعارات عند فتح التطبيق
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('📩 إشعار جديد: ${message.notification?.title}');
+      debugPrint('📩 إشعار جديد وارد: ${message.notification?.title}');
       debugPrint('📄 الرسالة: ${message.notification?.body}');
       _showLocalNotification(message);
     });
@@ -82,6 +84,13 @@ class FirebaseNotificationService {
   static Future<void> _requestPermission() async {
     try {
       NotificationSettings settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      // تمكين عرض التنبيهات والأصوات داخل التطبيق فورياً على iOS
+      await _messaging.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
         sound: true,
@@ -144,27 +153,84 @@ class FirebaseNotificationService {
     }
   }
 
-  /// عرض إشعار محلي
+  /// عرض إشعار محلي/شريط تنبيه فور ورود إشعار والتطبيق مفتوح
   static void _showLocalNotification(RemoteMessage message) {
     debugPrint('📱 عرض إشعار محلي: ${message.notification?.title}');
+    final title = message.notification?.title ?? message.data['title'] ?? 'إشعار جديد من بركات عدن';
+    final body = message.notification?.body ?? message.data['body'] ?? '';
+
+    final context = AppRouter.navigatorKey.currentContext;
+    if (context != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 4),
+          content: Row(
+            children: [
+              const Icon(Icons.notifications_active, color: Color(0xFF38BDF8), size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (body.isNotEmpty)
+                      Text(
+                        body,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'عرض',
+            textColor: const Color(0xFF38BDF8),
+            onPressed: () => _handleNotificationTap(message),
+          ),
+        ),
+      );
+    }
   }
 
-  /// معالجة النقر على الإشعار
+  /// معالجة النقر على الإشعار وتوجيه المستخدم للجهة المناسبة
   static void _handleNotificationTap(RemoteMessage message) {
     final data = message.data;
     final type = data['type'] ?? 'general';
     final orderId = data['order_id'];
     final route = data['route'];
 
-    debugPrint('🔗 نوع الإشعار: $type');
-    debugPrint('🔗 المسار: $route');
+    debugPrint('🔗 النقر على الإشعار: نوع=$type، طلب=$orderId، مسار=$route');
 
-    if (orderId != null && orderId.toString().isNotEmpty) {
-      // التنقل لصفحة الطلبات أو الإشعارات
+    try {
+      if (orderId != null && orderId.toString().isNotEmpty) {
+        // توجيه العميل إلى صفحة طلباته لمتابعة مسار شحنته
+        AppRouter.router.push('/orders');
+      } else if (route != null && route.toString().isNotEmpty && route != '/') {
+        AppRouter.router.push(route.toString());
+      } else {
+        AppRouter.router.push('/notifications');
+      }
+    } catch (e) {
+      debugPrint('❌ تعذر التوجيه من الإشعار: $e');
+      try {
+        AppRouter.router.push('/notifications');
+      } catch (_) {}
     }
   }
 
-  /// إلغاء الاشتراك في موضوع
+  /// الاشتراك في موضوع (Topic)
   static Future<void> subscribeToTopic(String topic) async {
     try {
       await _messaging.subscribeToTopic(topic);

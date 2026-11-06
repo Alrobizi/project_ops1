@@ -10,7 +10,7 @@ class AppNotification {
   final String id;
   final String title;
   final String body;
-  final String type; // payment_pending, payment_success, payment_failed, order_preparing, order_shipped, order_delivered
+  final String type; // payment_pending, payment_success, payment_failed, order_placed, order_preparing, order_shipped, order_delivered, order_cancelled
   final Map<String, dynamic>? data;
   final DateTime? readAt;
   final DateTime createdAt;
@@ -58,12 +58,16 @@ class AppNotification {
         return Icons.warning_amber_rounded;
       case 'payment_pending':
         return Icons.hourglass_top_rounded;
+      case 'order_placed':
+        return Icons.receipt_long_rounded;
       case 'order_preparing':
         return Icons.inventory_2_rounded;
       case 'order_shipped':
         return Icons.local_shipping_rounded;
       case 'order_delivered':
         return Icons.verified_rounded;
+      case 'order_cancelled':
+        return Icons.cancel_outlined;
       default:
         return Icons.notifications_rounded;
     }
@@ -76,6 +80,7 @@ class AppNotification {
       case 'order_delivered':
         return const Color(0xFF10B981); // green
       case 'payment_failed':
+      case 'order_cancelled':
         return const Color(0xFFEF4444); // red/orange
       case 'payment_pending':
         return const Color(0xFFF59E0B); // amber/orange
@@ -83,6 +88,8 @@ class AppNotification {
         return const Color(0xFF3B82F6); // blue
       case 'order_preparing':
         return const Color(0xFF8B5CF6); // purple
+      case 'order_placed':
+        return const Color(0xFF0284C7); // cyan-blue
       default:
         return AppColors.primary; // primary
     }

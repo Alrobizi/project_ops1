@@ -19,17 +19,13 @@ class FcmChannel
      */
     public function send($notifiable, Notification $notification): void
     {
-        if (empty($notifiable->fcm_token)) {
-            return;
-        }
-
         if (! method_exists($notification, 'toFcm')) {
             return;
         }
 
         $fcmData = $notification->toFcm($notifiable);
 
-        if (empty($fcmData)) {
+        if (empty($fcmData) || empty($notifiable->fcm_token)) {
             return;
         }
 

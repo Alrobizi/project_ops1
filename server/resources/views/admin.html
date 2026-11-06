@@ -335,6 +335,12 @@
       async getCustomers() {
         return this.request('/admin/customers');
       },
+      async updateCustomer(id, data) {
+        return this.request(`/admin/customers/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+      },
       async toggleCustomer(id) {
         return this.request(`/admin/customers/${id}/toggle`, {
           method: 'PATCH'
@@ -1543,31 +1549,125 @@
     };
 
     // ==========================================
-    // 2. USERS & CUSTOMERS VIEW (المستخدمون والعملاء)
+    // 2. USERS & CUSTOMERS VIEW (المستخدمون والعملاء والصلاحيات وكلمات المرور)
     // ==========================================
+    const AVAILABLE_PERMISSIONS = [
+      { key: 'products', label: 'المنتجات والتصنيفات', desc: 'إضافة وتعديل وحذف المنتجات والأقسام والأسعار', icon: 'Package' },
+      { key: 'orders', label: 'إدارة الطلبات', desc: 'متابعة الطلبات وتحديث حالات الدفع والشحن', icon: 'ShoppingCart' },
+      { key: 'customers', label: 'العملاء والمستخدمون', desc: 'عرض حسابات العملاء وتعديل الصلاحيات', icon: 'Users' },
+      { key: 'discounts', label: 'الخصومات والكوبونات', desc: 'إنشاء وإدارة أكواد الخصم والعروض الترويجية', icon: 'Percent' },
+      { key: 'reports', label: 'التقارير والإحصائيات', desc: 'متابعة المبيعات والأرباح والمنتجات الأكثر طلباً', icon: 'BarChart3' },
+      { key: 'content', label: 'المحتوى والبانرات', desc: 'إدارة البانرات الإعلانية والصفحات والأسئلة الشائعة', icon: 'LayoutDashboard' },
+      { key: 'marketing', label: 'التسويق والإشعارات', desc: 'إنشاء الحملات الترويجية وإرسال إشعارات FCM للتطبيق', icon: 'Megaphone' },
+      { key: 'settings', label: 'إعدادات المتجر', desc: 'أرقام التواصل والواتساب وبيانات التحويل', icon: 'Settings' },
+      { key: 'users', label: 'المشرفون والإدارة', desc: 'إدارة أدوار المشرفين وصلاحيات الوصول للوحة', icon: 'Shield' },
+    ];
+
     const UsersView = ({ customers, setCustomers, showToast }) => {
       const [searchQuery, setSearchQuery] = useState("");
       const [roleFilter, setRoleFilter] = useState("all");
+      const [permissionModalUser, setPermissionModalUser] = useState(null);
+      const [editRole, setEditRole] = useState("customer");
+      const [editPermissions, setEditPermissions] = useState([]);
+      const [newPassword, setNewPassword] = useState("");
+      const [showPassword, setShowPassword] = useState(false);
+      const [isSavingPermissions, setIsSavingPermissions] = useState(false);
 
       const filteredCustomers = useMemo(() => {
         return customers.filter(c => {
-          const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          const matchSearch = (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (c.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             (c.phone && c.phone.includes(searchQuery));
           const matchRole = roleFilter === "all" || c.role === roleFilter;
           return matchSearch && matchRole;
         });
       }, [customers, searchQuery, roleFilter]);
 
-      const handleToggleUserStatus = (id) => {
-        setCustomers(prev => prev.map(c => {
-          if (c.id === id) {
-            const nextStatus = !c.is_active;
-            showToast(`تم ${nextStatus ? 'تفعيل' : 'إيقاف'} حساب ${c.name} 🟢`);
-            return { ...c, is_active: nextStatus };
+      const handleToggleUserStatus = async (id) => {
+        try {
+          const user = customers.find(c => c.id === id);
+          const nextStatus = !user?.is_active;
+          setCustomers(prev => prev.map(c => c.id === id ? { ...c, is_active: nextStatus } : c));
+          await BarakatApi.toggleCustomer(id);
+          showToast(`تم ${nextStatus ? 'تفعيل' : 'إيقاف'} حساب ${user?.name || ''} 🟢`);
+        } catch (err) {
+          showToast(err.message || 'حدث خطأ أثناء تحديث حالة الحساب', 'error');
+        }
+      };
+
+      const openPermissionsModal = (user) => {
+        setPermissionModalUser(user);
+        setEditRole(user.role || 'customer');
+        setNewPassword("");
+        setShowPassword(false);
+        let perms = [];
+        if (Array.isArray(user.admin_permissions)) {
+          perms = [...user.admin_permissions];
+        } else if (typeof user.admin_permissions === 'string') {
+          try {
+            perms = JSON.parse(user.admin_permissions);
+          } catch(e) {
+            perms = user.admin_permissions.split(' ').filter(Boolean);
           }
-          return c;
-        }));
+        }
+        setEditPermissions(perms);
+      };
+
+      const togglePermission = (key) => {
+        setEditPermissions(prev =>
+          prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]
+        );
+      };
+
+      const toggleAllPermissions = () => {
+        if (editPermissions.length === AVAILABLE_PERMISSIONS.length) {
+          setEditPermissions([]);
+        } else {
+          setEditPermissions(AVAILABLE_PERMISSIONS.map(p => p.key));
+        }
+      };
+
+      const handleSavePermissions = async () => {
+        if (!permissionModalUser) return;
+        if (newPassword && newPassword.length < 6) {
+          showToast("كلمة المرور يجب أن تتكون من 6 أحرف على الأقل", "error");
+          return;
+        }
+
+        setIsSavingPermissions(true);
+        try {
+          const updatedPerms = editRole === 'admin' ? editPermissions : [];
+          const payload = {
+            role: editRole,
+            admin_permissions: updatedPerms,
+          };
+          if (newPassword.trim()) {
+            payload.password = newPassword.trim();
+          }
+
+          await BarakatApi.updateCustomer(permissionModalUser.id, payload);
+
+          setCustomers(prev => prev.map(c => {
+            if (c.id === permissionModalUser.id) {
+              return {
+                ...c,
+                role: editRole,
+                admin_permissions: updatedPerms,
+              };
+            }
+            return c;
+          }));
+
+          const msg = newPassword.trim()
+            ? `تم تحديث صلاحيات وكلمة مرور «${permissionModalUser.name}» بنجاح! 🟢`
+            : `تم تحديث صلاحيات «${permissionModalUser.name}» بنجاح! 🟢`;
+          showToast(msg);
+          setPermissionModalUser(null);
+        } catch (err) {
+          showToast(err.message || 'حدث خطأ أثناء حفظ التغييرات', 'error');
+        } finally {
+          setIsSavingPermissions(false);
+        }
       };
 
       const totalUsers = customers.length;
@@ -1587,7 +1687,7 @@
                 إدارة المستخدمين والعملاء
               </h2>
               <p className="text-xs text-slate-400 font-medium mt-1">
-                سجل حسابات العملاء والمدراء، ومتابعة النشاط وإجمالي المشتريات
+                سجل حسابات العملاء والمدراء، ومتابعة النشاط وتعيين الصلاحيات وكلمات المرور
               </p>
             </div>
           </div>
@@ -1613,9 +1713,9 @@
           </div>
 
           {/* SEARCH & FILTERS */}
-          <div className="bg-white dark:bg-[#131B2E] rounded-3xl p-4 border border-slate-100 dark:border-[#1F293D] shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white dark:bg-[#131B2E] p-3 rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
             <div className="relative w-full md:w-80">
-              <span className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+              <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
                 <Icon name="Search" size={16} />
               </span>
               <input
@@ -1646,25 +1746,27 @@
                   <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/20">
                     <th className="py-4 pr-5">المستخدم</th>
                     <th className="py-4">رقم الهاتف</th>
-                    <th className="py-4">الدور</th>
+                    <th className="py-4">الدور الحالي</th>
                     <th className="py-4">الطلبات</th>
                     <th className="py-4">إجمالي المشتريات</th>
                     <th className="py-4">تاريخ التسجيل</th>
+                    <th className="py-4 text-center">الإدارة والتحكم</th>
                     <th className="py-4 pl-5 text-left">الحالة</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                   {filteredCustomers.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="py-12 text-center text-slate-400 font-medium">
+                      <td colSpan="8" className="py-12 text-center text-slate-400 font-medium">
                         لا يوجد مستخدمون مطابقون لمعايير البحث
                       </td>
                     </tr>
                   ) : (
                     filteredCustomers.map((user) => {
-                      const initials = user.name.split(" ").map(n => n[0]).slice(0, 2).join("");
+                      const initials = (user.name || "م").split(" ").map(n => n[0]).slice(0, 2).join("");
                       const isAdmin = user.role === "admin";
                       const isVip = user.is_vip || (user.total_spent > 5000);
+                      const permsCount = Array.isArray(user.admin_permissions) ? user.admin_permissions.length : 0;
 
                       return (
                         <tr key={user.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
@@ -1696,13 +1798,13 @@
                           </td>
 
                           <td className="py-3.5">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold ${
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black ${
                               isAdmin
-                                ? "bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-100"
+                                ? "bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200/60"
                                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
                             }`}>
                               <Icon name={isAdmin ? "Shield" : "Users"} size={13} />
-                              {user.roleLabel || (isAdmin ? "مدير المتجر" : "عميل")}
+                              {isAdmin ? "مدير المتجر" : "عميل"}
                             </span>
                           </td>
 
@@ -1716,6 +1818,17 @@
 
                           <td className="py-3.5 text-slate-400 text-[11px]">
                             {user.register_date || "2026-10-01"}
+                          </td>
+
+                          <td className="py-3.5 text-center">
+                            <button
+                              onClick={() => openPermissionsModal(user)}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl text-[11px] font-black bg-gradient-to-r from-brand-50 to-indigo-50 hover:from-brand-100 hover:to-indigo-100 dark:from-brand-950/40 dark:to-indigo-950/40 text-brand-600 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800/40 transition-all shadow-xs hover:scale-102"
+                              title="تعديل الصلاحيات وكلمة المرور"
+                            >
+                              <Icon name="Edit" size={13} />
+                              <span>{isAdmin ? `تعديل (${permsCount})` : 'تعديل وترقية'}</span>
+                            </button>
                           </td>
 
                           <td className="py-3.5 pl-5 text-left">
@@ -1740,6 +1853,226 @@
               </table>
             </div>
           </div>
+
+          {/* PERMISSIONS & PASSWORD MODAL */}
+          {permissionModalUser && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+              <div className="bg-white dark:bg-[#131B2E] rounded-3xl border border-slate-100 dark:border-[#1F293D] shadow-2xl w-full max-w-xl max-h-[92vh] overflow-hidden flex flex-col animate-slideUp">
+                {/* MODAL HEADER */}
+                <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-bold text-sm shadow-soft">
+                      {(permissionModalUser.name || "م").slice(0, 2)}
+                    </div>
+                    <div>
+                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-base">
+                        تعديل المستخدم: {permissionModalUser.name}
+                      </h3>
+                      <span className="text-xs text-slate-400 block font-mono">{permissionModalUser.email}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPermissionModalUser(null)}
+                    className="w-9 h-9 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <Icon name="X" size={18} />
+                  </button>
+                </div>
+
+                {/* MODAL BODY */}
+                <div className="p-6 overflow-y-auto space-y-5 flex-1 text-right">
+                  {/* ROLE SELECTION */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
+                      الدور الأساسي للحساب:
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditRole('customer')}
+                        className={`p-3.5 rounded-2xl border text-right transition-all flex items-center justify-between ${
+                          editRole === 'customer'
+                            ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-500 text-brand-600 dark:text-brand-300 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                            editRole === 'customer' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                          }`}>
+                            <Icon name="Users" size={16} />
+                          </div>
+                          <div>
+                            <span className="font-bold text-xs block">عميل عادي</span>
+                            <span className="text-[10px] text-slate-400 block">بدون وصول للإدارة</span>
+                          </div>
+                        </div>
+                        {editRole === 'customer' && <Icon name="Check" size={16} className="text-brand-500" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditRole('admin');
+                          if (editPermissions.length === 0) {
+                            setEditPermissions(AVAILABLE_PERMISSIONS.map(p => p.key));
+                          }
+                        }}
+                        className={`p-3.5 rounded-2xl border text-right transition-all flex items-center justify-between ${
+                          editRole === 'admin'
+                            ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 text-purple-600 dark:text-purple-300 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                            editRole === 'admin' ? 'bg-purple-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                          }`}>
+                            <Icon name="Shield" size={16} />
+                          </div>
+                          <div>
+                            <span className="font-bold text-xs block">مدير / مشرف</span>
+                            <span className="text-[10px] text-slate-400 block">تحكم بالمتجر والتطبيق</span>
+                          </div>
+                        </div>
+                        {editRole === 'admin' && <Icon name="Check" size={16} className="text-purple-600" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CHANGE PASSWORD INPUT */}
+                  <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Icon name="Key" size={14} className="text-amber-500" />
+                        <span>تعيين كلمة مرور جديدة:</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const randPass = 'Pass' + Math.floor(100000 + Math.random() * 900000);
+                          setNewPassword(randPass);
+                          setShowPassword(true);
+                        }}
+                        className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                      >
+                        <span>توليد عشوائي 🎲</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="اترك فارغاً إن لم ترغب بتغييرها (6 أحرف أو أكثر)..."
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-[#F6F7FB] dark:bg-[#0B0F19] text-xs font-mono text-slate-800 dark:text-slate-200 placeholder-slate-400 pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 focus:border-brand-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        title={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                      >
+                        <Icon name={showPassword ? "Eye" : "Key"} size={15} />
+                      </button>
+                    </div>
+                    {newPassword && (
+                      <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                        سيتم اعتماد كلمة المرور الجديدة فور الضغط على حفظ.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* PERMISSIONS CHECKLIST (VISIBLE ONLY WHEN ROLE IS ADMIN) */}
+                  {editRole === 'admin' && (
+                    <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-black text-xs text-slate-800 dark:text-slate-200">
+                            صلاحيات لوحة التحكم وتطبيق فلاتر
+                          </h4>
+                          <span className="text-[10px] text-slate-400">
+                            تم تحديد {editPermissions.length} من أصل {AVAILABLE_PERMISSIONS.length} صلاحيات
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={toggleAllPermissions}
+                          className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline"
+                        >
+                          {editPermissions.length === AVAILABLE_PERMISSIONS.length ? 'إلغاء تحديد الكل' : 'تحديد جميع الصلاحيات'}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                        {AVAILABLE_PERMISSIONS.map((perm) => {
+                          const isChecked = editPermissions.includes(perm.key);
+                          return (
+                            <div
+                              key={perm.key}
+                              onClick={() => togglePermission(perm.key)}
+                              className={`p-2.5 rounded-2xl border cursor-pointer select-none transition-all flex items-start gap-2.5 ${
+                                isChecked
+                                  ? 'bg-brand-50/70 dark:bg-brand-950/30 border-brand-300 dark:border-brand-800/60 shadow-xs'
+                                  : 'bg-white dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                              }`}
+                            >
+                              <div className={`w-5 h-5 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0 transition-colors ${
+                                isChecked
+                                  ? 'bg-brand-500 text-white'
+                                  : 'border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800'
+                              }`}>
+                                {isChecked && <Icon name="Check" size={12} />}
+                              </div>
+                              <div className="flex-1">
+                                <span className={`text-xs font-black block ${isChecked ? 'text-brand-700 dark:text-brand-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                                  {perm.label}
+                                </span>
+                                <span className="text-[10px] text-slate-400 leading-tight block mt-0.5">
+                                  {perm.desc}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* MODAL FOOTER */}
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPermissionModalUser(null)}
+                    disabled={isSavingPermissions}
+                    className="px-5 py-2.5 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSavePermissions}
+                    disabled={isSavingPermissions}
+                    className="px-6 py-2.5 rounded-2xl text-xs font-black bg-gradient-to-r from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white shadow-soft transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSavingPermissions ? (
+                      <>
+                        <Icon name="RefreshCw" size={14} className="animate-spin" />
+                        <span>جاري الحفظ...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="Save" size={14} />
+                        <span>حفظ التعديلات</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };

@@ -24,7 +24,10 @@ import 'models/models.dart';
 import 'core/theme/app_colors.dart';
 
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static final router = GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: '/splash',
     routes: [
       // شاشات المصادقة
@@ -112,8 +115,10 @@ class AppRouter {
       GoRoute(
         path: '/order-details/:id',
         builder: (context, state) {
-          final order = state.extra as Order;
-          return OrderDetailsScreen(order: order);
+          if (state.extra is Order) {
+            return OrderDetailsScreen(order: state.extra as Order);
+          }
+          return const OrdersScreen();
         },
       ),
       GoRoute(

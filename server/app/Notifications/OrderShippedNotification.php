@@ -27,7 +27,7 @@ class OrderShippedNotification extends Notification
     public function toFcm($notifiable): array
     {
         $title = "طلبك في الطريق إليك 🚚";
-        $body = "تم شحن طلبك رقم #{$this->order->order_number} وهو في طريقه للتسليم";
+        $body = "تم شحن طلبك رقم #{$this->order->order_number} وهو في طريقه إليك الآن.";
 
         NotificationLog::create([
             'user_id' => $notifiable->id,
@@ -37,6 +37,7 @@ class OrderShippedNotification extends Notification
             'data' => [
                 'order_id' => $this->order->id,
                 'order_number' => $this->order->order_number,
+                'route' => "/order-details/{$this->order->id}",
             ],
         ]);
 
@@ -46,7 +47,7 @@ class OrderShippedNotification extends Notification
             'data' => [
                 'type' => 'order_shipped',
                 'order_id' => (string) $this->order->id,
-                'order_number' => $this->order->order_number,
+                'order_number' => (string) $this->order->order_number,
                 'route' => "/order-details/{$this->order->id}",
             ],
         ];

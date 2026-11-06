@@ -27,7 +27,7 @@ class OrderPreparingNotification extends Notification
     public function toFcm($notifiable): array
     {
         $title = "طلبك قيد التجهيز 📦";
-        $body = "جارٍ تجهيز طلبك رقم #{$this->order->order_number} ليتم شحنه في أقرب وقت";
+        $body = "جارٍ تجهيز طلبك رقم #{$this->order->order_number} بعناية ليتم شحنه في أقرب وقت.";
 
         NotificationLog::create([
             'user_id' => $notifiable->id,
@@ -37,6 +37,7 @@ class OrderPreparingNotification extends Notification
             'data' => [
                 'order_id' => $this->order->id,
                 'order_number' => $this->order->order_number,
+                'route' => "/order-details/{$this->order->id}",
             ],
         ]);
 
@@ -46,7 +47,7 @@ class OrderPreparingNotification extends Notification
             'data' => [
                 'type' => 'order_preparing',
                 'order_id' => (string) $this->order->id,
-                'order_number' => $this->order->order_number,
+                'order_number' => (string) $this->order->order_number,
                 'route' => "/order-details/{$this->order->id}",
             ],
         ];

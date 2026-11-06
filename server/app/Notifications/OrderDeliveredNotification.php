@@ -26,8 +26,8 @@ class OrderDeliveredNotification extends Notification
 
     public function toFcm($notifiable): array
     {
-        $title = "تم تسليم طلبك بنجاح 🎉";
-        $body = "شكراً لصلتك بنا! تم تسليم طلبك رقم #{$this->order->order_number} بنجاح";
+        $title = "تم تسليم طلبك بنجاح ✅";
+        $body = "شكراً لثقتك بنا! تم تسليم طلبك رقم #{$this->order->order_number} بنجاح. نتمنى أن تنال المنتجات إعجابك.";
 
         NotificationLog::create([
             'user_id' => $notifiable->id,
@@ -37,6 +37,7 @@ class OrderDeliveredNotification extends Notification
             'data' => [
                 'order_id' => $this->order->id,
                 'order_number' => $this->order->order_number,
+                'route' => "/order-details/{$this->order->id}",
             ],
         ]);
 
@@ -46,7 +47,7 @@ class OrderDeliveredNotification extends Notification
             'data' => [
                 'type' => 'order_delivered',
                 'order_id' => (string) $this->order->id,
-                'order_number' => $this->order->order_number,
+                'order_number' => (string) $this->order->order_number,
                 'route' => "/order-details/{$this->order->id}",
             ],
         ];
