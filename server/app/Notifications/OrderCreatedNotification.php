@@ -54,3 +54,4 @@ class OrderCreatedNotification extends Notification
         ];
     }
 }
+

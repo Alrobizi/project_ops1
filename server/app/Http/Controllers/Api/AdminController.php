@@ -274,17 +274,53 @@ class AdminController extends Controller
 
     public function updateSettings(Request $request)
     {
-        $validated = $request->validate([
-            'settings' => 'required|array',
-            'settings.*.key' => 'required|string',
-            'settings.*.value' => 'nullable|string',
-        ]);
+        $data = $request->all();
 
-        foreach ($validated['settings'] as $item) {
-            Setting::set($item['key'], $item['value'] ?? '');
+        // 1. إذا تم إرسال مصفوفة key/value في حقل settings
+        if (isset($data['settings']) && is_array($data['settings'])) {
+            foreach ($data['settings'] as $item) {
+                if (is_array($item) && isset($item['key'])) {
+                    Setting::set($item['key'], $item['value'] ?? '');
+                }
+            }
         }
 
-        return response()->json(['message' => 'تم تحديث الإعدادات بنجاح']);
+        // 2. إذا تم إرسال الحقول مباشرة ككائن: {"store_phone": "...", "whatsapp_number": "..."}
+        foreach ($data as $key => $val) {
+            if ($key === 'settings' || $key === '_method' || $key === '_token') {
+                continue;
+            }
+            if (is_scalar($val)) {
+                Setting::set($key, (string) $val);
+            }
+        }
+
+        // مزامنة أرقام الواتساب وهاتف المتجر لضمان التوافق مع كافة واجهات التطبيق
+        if ($request->has('whatsapp_number') && !empty($request->input('whatsapp_number'))) {
+            $num = (string) $request->input('whatsapp_number');
+            Setting::set('whatsapp_number', $num);
+            Setting::set('whatsapp_transfer_number', $num);
+        }
+        if ($request->has('store_phone') && !empty($request->input('store_phone'))) {
+            $phone = (string) $request->input('store_phone');
+            Setting::set('store_phone', $phone);
+            // إذا لم يكن رقم الواتساب محدداً، نعتمد هاتف المتجر
+            if (!Setting::get('whatsapp_number')) {
+                Setting::set('whatsapp_number', $phone);
+                Setting::set('whatsapp_transfer_number', $phone);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حفظ وتحديث الإعدادات بنجاح',
+            'data' => [
+                'whatsapp_number' => Setting::get('whatsapp_number'),
+                'store_phone' => Setting::get('store_phone'),
+                'store_name' => Setting::get('store_name'),
+                'store_email' => Setting::get('store_email'),
+            ],
+        ]);
     }
 
     // ============================================

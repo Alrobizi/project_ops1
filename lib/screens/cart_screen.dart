@@ -439,6 +439,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         if (whatsapp != null && whatsapp.isNotEmpty) {
           return whatsapp;
         }
+        final transferNum = settings['whatsapp_transfer_number']?.toString().trim();
+        if (transferNum != null && transferNum.isNotEmpty) {
+          return transferNum;
+        }
         final storePhone = settings['store_phone']?.toString().trim();
         if (storePhone != null && storePhone.isNotEmpty) {
           return storePhone;
@@ -637,8 +641,27 @@ $itemsList
         );
 
     if (order != null && mounted) {
+      // تحديث قائمة الإشعارات فورياً لإظهار إشعار استلام الطلب
+      ref.read(notificationsProvider.notifier).fetchNotifications();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('🎉 تم استلام طلبك رقم #${order.orderNumber} بنجاح! تم إرسال إشعار بتفاصيله.'),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
       if (_paymentMethod == 'إرسال حوالة مباشرة') {
-        // [تطبيق الإجراء الجديد]: توجيه المستخدم مباشرة لمحادثة الواتساب باستخدام رقم لوحة التحكم
+        // [تطبيق الإجراء الجديد]: توجيه المستخدم مباشرة لمحادثة الواتساب باستخدام رقم لوحة التحكم المحدث
         await _launchDirectWhatsApp(order: order);
       }
 

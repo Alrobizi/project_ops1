@@ -244,6 +244,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState();
   }
 
+  /// تحديث بيانات الملف الشخصي وحفظها بالسيرفر
+  Future<bool> updateProfile({String? name, String? phone, String? email}) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final updatedUser = await _authService.updateProfile(
+        name: name,
+        phone: phone,
+        email: email,
+      );
+      state = state.copyWith(
+        user: updatedUser,
+        isLoading: false,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+      return false;
+    }
+  }
+
   void clearError() => state = state.copyWith(error: null);
 }
 

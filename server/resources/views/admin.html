@@ -350,9 +350,10 @@
         return this.request('/settings');
       },
       async updateSettings(data) {
+        const settingsArray = Object.entries(data).map(([key, value]) => ({ key, value: String(value ?? '') }));
         return this.request('/admin/settings', {
           method: 'PUT',
-          body: JSON.stringify(data)
+          body: JSON.stringify({ ...data, settings: settingsArray })
         });
       },
       async getCategories() {
@@ -2096,12 +2097,20 @@
           localStorage.setItem('barakat_store_settings', JSON.stringify(formData));
           if (isLiveMode) {
             try {
-              await BarakatApi.updateSettings(formData);
+              const res = await BarakatApi.updateSettings(formData);
+              if (res && res.message) {
+                showToast(res.message);
+              } else {
+                showToast("تم حفظ جميع إعدادات المتجر بنجاح! 🟢");
+              }
             } catch (err) {
-              console.warn("Backend settings update:", err.message);
+              console.error("Backend settings update error:", err);
+              showToast("تعذر حفظ الإعدادات في الخادم: " + (err.message || ''), "error");
+              return;
             }
+          } else {
+            showToast("تم حفظ جميع إعدادات المتجر محلياً بنجاح! 🟢");
           }
-          showToast("تم حفظ جميع إعدادات المتجر بنجاح! 🟢");
         } catch (err) {
           showToast("حدث خطأ أثناء حفظ الإعدادات", "error");
         } finally {

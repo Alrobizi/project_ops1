@@ -53,3 +53,4 @@ class OrderCancelledNotification extends Notification
         ];
     }
 }
+

@@ -295,6 +295,23 @@ class AuthService {
       _apiClient.clearToken();
     }
   }
+
+  /// تحديث الملف الشخصي للمستخدم
+  Future<User> updateProfile({
+    String? name,
+    String? phone,
+    String? email,
+  }) async {
+    final data = <String, dynamic>{};
+    if (name != null) data['name'] = name;
+    if (phone != null) data['phone'] = phone;
+    if (email != null) data['email'] = email;
+
+    final response = await _apiClient.put('/user', data: data);
+    final userJson = Map<String, dynamic>.from(response.data['data']);
+    userJson['token'] = _apiClient.token;
+    return User.fromJson(userJson);
+  }
 }
 
 /// خدمة المنتجات

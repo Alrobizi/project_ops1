@@ -125,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
                 _MenuItem(
                   icon: Icons.notifications_outlined,
                   title: 'الإشعارات',
-                  onTap: () {},
+                  onTap: () => context.push('/notifications'),
                 ),
                 _MenuItem(
                   icon: Icons.language_outlined,
@@ -330,6 +330,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -344,6 +345,36 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    final success = await ref.read(authProvider.notifier).updateProfile(
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+        );
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم حفظ وتحديث بياناتك بنجاح 🟢'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.pop();
+    } else {
+      final error = ref.read(authProvider).error ?? 'فشل حفظ التعديلات';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -426,18 +457,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               const SizedBox(height: 32),
               // زر الحفظ
               CustomButton(
-                text: 'حفظ التغييرات',
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('تم حفظ التغييرات بنجاح'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                    context.pop();
-                  }
-                },
+                text: _isSaving ? 'جارِ الحفظ...' : 'حفظ التغييرات',
+                isLoading: _isSaving,
+                onPressed: _isSaving ? null : _handleSave,
               ),
             ],
           ),
