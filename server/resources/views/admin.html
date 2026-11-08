@@ -444,8 +444,8 @@
     const INITIAL_SETTINGS = {
       store_name: "بركة عدن",
       store_tagline: "لوحة تحكم المتجر العصرية المتكاملة",
-      store_phone: "777123456",
-      whatsapp_number: "967772055335",
+      store_phone: "772055335",
+      whatsapp_number: "772055335",
       store_email: "info@store.com",
       store_currency: "SAR",
       transfer_recipient_name: "صبري العبد ناصر الربيزي",
@@ -2085,6 +2085,12 @@
       const [formData, setFormData] = useState({ ...settings });
       const [isSaving, setIsSaving] = useState(false);
 
+      useEffect(() => {
+        if (settings) {
+          setFormData(prev => ({ ...prev, ...settings }));
+        }
+      }, [settings]);
+
       const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
       };
@@ -2103,6 +2109,13 @@
               } else {
                 showToast("تم حفظ جميع إعدادات المتجر بنجاح! 🟢");
               }
+              try {
+                const fresh = await BarakatApi.getSettings();
+                if (fresh && fresh.data) {
+                  setSettings(prev => ({ ...prev, ...fresh.data }));
+                  localStorage.setItem('barakat_store_settings', JSON.stringify({ ...formData, ...fresh.data }));
+                }
+              } catch (e) {}
             } catch (err) {
               console.error("Backend settings update error:", err);
               showToast("تعذر حفظ الإعدادات في الخادم: " + (err.message || ''), "error");

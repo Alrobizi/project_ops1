@@ -719,11 +719,13 @@ class OrderStatusBadge extends StatelessWidget {
         color = AppColors.success;
         break;
       case OrderStatus.shipped:
-        color = AppColors.primaryAccent;
+        color = const Color(0xFF3B82F6); // Blue
+        break;
+      case OrderStatus.processing:
+        color = const Color(0xFF8B5CF6); // Purple
         break;
       case OrderStatus.pending:
-      case OrderStatus.processing:
-        color = AppColors.warning;
+        color = const Color(0xFFF59E0B); // Amber
         break;
       case OrderStatus.cancelled:
         color = AppColors.error;

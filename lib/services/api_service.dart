@@ -3,10 +3,12 @@
 // جاهزة للربط مع Laravel API باستخدام Dio
 // ============================================
 
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:dio/dio.dart';
 import '../models/models.dart';
 import '../models/notification.dart';
 import '../data/dummy_data.dart';
+import 'firebase_notification_service.dart';
 
 /// كلاس ApiClient يغلف Dio مع interceptor للتوكن
 class ApiClient {
@@ -46,7 +48,11 @@ class ApiClient {
     ));
   }
 
-  void setToken(String token) => _token = token;
+  void setToken(String token) {
+    _token = token;
+    setFcmApiClient(this);
+    FirebaseNotificationService.syncToken();
+  }
   void clearToken() => _token = null;
 
   /// التوكن الحالي (يُستخدم عند استعادة بيانات المستخدم بعد إعادة التشغيل)
@@ -93,9 +99,14 @@ class ApiClient {
   /// إرسال توكن FCM للسيرفر (يتطلب تسجيل الدخول)
   Future<void> sendFcmToken(String fcmToken) async {
     try {
-      await _dio.post('/user/fcm-token', data: {'fcm_token': fcmToken});
+      if (_token == null || _token!.isEmpty) {
+        debugPrint('⚠️ تخطي إرسال توكن FCM لعدم وجود توكن مصادقة حالي للمستخدم');
+        return;
+      }
+      final res = await _dio.post('/user/fcm-token', data: {'fcm_token': fcmToken});
+      debugPrint('✅ تم حفظ توكن FCM في حساب المستخدم بنجاح: ${res.statusCode}');
     } catch (e) {
-      // تجاهل الخطأ إذا لم يكن المستخدم مسجلاً دخوله
+      debugPrint('❌ خطأ في إرسال توكن FCM للسيرفر: $e');
     }
   }
 

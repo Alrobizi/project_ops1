@@ -252,14 +252,18 @@ class AdminController extends Controller
     {
         $whatsappNumber = Setting::get('whatsapp_number')
             ?: Setting::get('whatsapp_transfer_number')
-            ?: Setting::get('store_phone');
+            ?: Setting::get('store_phone')
+            ?: '772055335';
+
+        $storePhone = Setting::get('store_phone') ?: '772055335';
 
         return response()->json([
             'data' => [
                 'whatsapp_number' => $whatsappNumber,
-                'store_phone' => Setting::get('store_phone'),
-                'store_name' => Setting::get('store_name'),
-                'store_email' => Setting::get('store_email'),
+                'whatsapp_transfer_number' => $whatsappNumber,
+                'store_phone' => $storePhone,
+                'store_name' => Setting::get('store_name', 'بركة عدن'),
+                'store_email' => Setting::get('store_email', 'info@store.com'),
                 'store_currency' => Setting::get('store_currency', 'YER'),
                 'transfer_recipient_name' => Setting::get('transfer_recipient_name', 'صبري العبد ناصر الربيزي'),
             ],

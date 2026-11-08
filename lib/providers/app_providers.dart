@@ -24,7 +24,11 @@ import '../services/firebase_notification_service.dart';
 // Providers للخدمات
 // ============================================
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final client = ApiClient();
+  setFcmApiClient(client);
+  return client;
+});
 final authServiceProvider = Provider<AuthService>((ref) => AuthService(ref.watch(apiClientProvider)));
 final productServiceProvider = Provider<ProductService>((ref) => ProductService(ref.watch(apiClientProvider)));
 final categoryServiceProvider = Provider<CategoryService>((ref) => CategoryService(ref.watch(apiClientProvider)));
@@ -518,7 +522,12 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
 }
 
 final ordersProvider = StateNotifierProvider<OrdersNotifier, OrdersState>((ref) {
-  return OrdersNotifier(ref.watch(orderServiceProvider));
+  final isAuth = ref.watch(authProvider.select((s) => s.isAuthenticated));
+  final notifier = OrdersNotifier(ref.watch(orderServiceProvider));
+  if (isAuth) {
+    Future.microtask(() => notifier.loadOrders());
+  }
+  return notifier;
 });
 
 // ============================================
@@ -1271,7 +1280,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
         storeSettings: const StoreSettings(
           name: 'بركة عدن',
           email: 'info@store.com',
-          phone: '777123456',
+          phone: '772055335',
           address: 'عدن، اليمن',
           description: 'متجر إلكتروني متخصص في المنتجات الإلكترونية',
           currency: 'YER',

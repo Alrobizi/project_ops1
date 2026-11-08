@@ -16,9 +16,9 @@ class OrderController extends BaseApiController
     {
         $orders = $request->user()
             ->orders()
-            ->with(['items', 'address'])
+            ->with(['items.product', 'address'])
             ->latest()
-            ->paginate(15);
+            ->paginate(50);
 
         return response()->json([
             'success' => true,
@@ -38,7 +38,7 @@ class OrderController extends BaseApiController
             return $this->error('غير مصرح لك بعرض هذا الطلب', 403);
         }
 
-        $order->load(['items', 'address']);
+        $order->load(['items.product', 'address']);
 
         return $this->success(new OrderResource($order));
     }

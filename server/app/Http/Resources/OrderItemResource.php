@@ -18,6 +18,8 @@ class OrderItemResource extends JsonResource
             'color' => $this->color,
             'size' => $this->size,
             'total' => $this->total,
+            'image' => $this->product?->image,
+            'product' => $this->whenLoaded('product', fn() => new ProductResource($this->product)),
         ];
     }
 }

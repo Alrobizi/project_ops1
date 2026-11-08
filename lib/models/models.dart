@@ -365,13 +365,28 @@ class CartItem {
 
   double get totalPrice => product.price * quantity;
 
-  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
-        id: json['id']?.toString() ?? '',
-        product: Product.fromJson(json['product'] ?? {}),
-        quantity: json['quantity'] ?? 1,
-        selectedColor: json['selected_color'] ?? '',
-        selectedSize: json['selected_size'] ?? '',
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    Product prod;
+    if (json['product'] != null && json['product'] is Map) {
+      prod = Product.fromJson(Map<String, dynamic>.from(json['product']));
+    } else {
+      prod = Product(
+        id: json['product_id']?.toString() ?? json['id']?.toString() ?? '',
+        name: json['product_name']?.toString() ?? json['name']?.toString() ?? 'منتج',
+        description: '',
+        price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+        categoryId: '',
+        image: fixImageUrl(json['image']?.toString() ?? json['product_image']?.toString() ?? ''),
       );
+    }
+    return CartItem(
+      id: json['id']?.toString() ?? '',
+      product: prod,
+      quantity: int.tryParse(json['quantity']?.toString() ?? '1') ?? 1,
+      selectedColor: json['color']?.toString() ?? json['selected_color']?.toString() ?? '',
+      selectedSize: json['size']?.toString() ?? json['selected_size']?.toString() ?? '',
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -399,10 +414,10 @@ class CartItem {
 
 /// حالة الطلب
 enum OrderStatus {
-  pending('قيد المعالجة', 'pending'),
-  processing('قيد المعالجة', 'processing'),
+  pending('قيد المراجعة', 'pending'),
+  processing('قيد التجهيز', 'processing'),
   shipped('قيد الشحن', 'shipped'),
-  delivered('مكتمل', 'delivered'),
+  delivered('تم التوصيل', 'delivered'),
   cancelled('ملغي', 'cancelled');
 
   final String arabicName;
@@ -410,10 +425,12 @@ enum OrderStatus {
   const OrderStatus(this.arabicName, this.englishName);
 
   static OrderStatus fromString(String status) {
-    return OrderStatus.values.firstWhere(
-      (e) => e.englishName == status || e.arabicName == status,
-      orElse: () => OrderStatus.pending,
-    );
+    final s = status.trim().toLowerCase();
+    if (s == 'processing' || s == 'قيد التجهيز') return OrderStatus.processing;
+    if (s == 'shipped' || s == 'قيد الشحن') return OrderStatus.shipped;
+    if (s == 'delivered' || s == 'تم التوصيل' || s == 'مكتمل') return OrderStatus.delivered;
+    if (s == 'cancelled' || s == 'ملغي' || s == 'ملغى') return OrderStatus.cancelled;
+    return OrderStatus.pending;
   }
 }
 
@@ -474,12 +491,12 @@ class Order {
               ?.map((e) => CartItem.fromJson(e))
               .toList() ??
           [],
-      subtotal: (json['subtotal'] ?? 0).toDouble(),
-      shipping: (json['shipping'] ?? 0).toDouble(),
-      total: (json['total'] ?? 0).toDouble(),
-      status: OrderStatus.fromString(json['status'] ?? 'pending'),
-      address: Address.fromJson(json['address'] ?? {}),
-      paymentMethod: method,
+      subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
+      shipping: double.tryParse(json['shipping']?.toString() ?? '0') ?? 0.0,
+      total: double.tryParse(json['total']?.toString() ?? '0') ?? 0.0,
+      status: OrderStatus.fromString(json['status']?.toString() ?? 'pending'),
+      address: Address.fromJson(json['address'] is Map ? Map<String, dynamic>.from(json['address']) : {}),
+      paymentMethod: method.toString(),
     );
   }
 

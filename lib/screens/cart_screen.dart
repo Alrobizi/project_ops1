@@ -1256,7 +1256,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
   final List<String> _tabs = [
     'الكل',
-    'قيد المعالجة',
+    'قيد المعالجة والتجهيز',
     'قيد الشحن',
     'مكتمل',
     'ملغي',
@@ -1266,6 +1266,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    Future.microtask(() {
+      ref.read(ordersProvider.notifier).loadOrders();
+    });
   }
 
   @override
@@ -1282,6 +1285,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
       appBar: AppBar(
         title: const Text('طلباتي'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'تحديث الطلبات',
+            onPressed: () => ref.read(ordersProvider.notifier).loadOrders(),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -1291,49 +1301,120 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           indicatorColor: AppColors.primary,
         ),
       ),
-      body: ordersState.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(ordersProvider.notifier).loadOrders(),
+        child: ordersState.isLoading && ordersState.orders.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : ordersState.error != null && ordersState.orders.isEmpty
+                ? _buildErrorState(ordersState.error!)
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOrdersList(ordersState.orders),
+                      _buildOrdersList(
+                        ordersState.orders
+                            .where((o) =>
+                                o.status == OrderStatus.pending ||
+                                o.status == OrderStatus.processing)
+                            .toList(),
+                      ),
+                      _buildOrdersList(
+                        ordersState.orders
+                            .where((o) => o.status == OrderStatus.shipped)
+                            .toList(),
+                      ),
+                      _buildOrdersList(
+                        ordersState.orders
+                            .where((o) => o.status == OrderStatus.delivered)
+                            .toList(),
+                      ),
+                      _buildOrdersList(
+                        ordersState.orders
+                            .where((o) => o.status == OrderStatus.cancelled)
+                            .toList(),
+                      ),
+                    ],
+                  ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildOrdersList(ordersState.orders),
-                _buildOrdersList(
-                  ordersState.orders
-                      .where((o) =>
-                          o.status == OrderStatus.pending ||
-                          o.status == OrderStatus.processing)
-                      .toList(),
+                const Icon(Icons.receipt_long_outlined, size: 70, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text(
+                  'تعذر تحميل الطلبات',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                _buildOrdersList(
-                  ordersState.orders
-                      .where((o) => o.status == OrderStatus.shipped)
-                      .toList(),
+                const SizedBox(height: 8),
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13),
                 ),
-                _buildOrdersList(
-                  ordersState.orders
-                      .where((o) => o.status == OrderStatus.delivered)
-                      .toList(),
-                ),
-                _buildOrdersList(
-                  ordersState.orders
-                      .where((o) => o.status == OrderStatus.cancelled)
-                      .toList(),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () => ref.read(ordersProvider.notifier).loadOrders(),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('إعادة المحاولة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ],
             ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildOrdersList(List<Order> orders) {
     if (orders.isEmpty) {
-      return const EmptyState(
-        icon: Icons.receipt_long_outlined,
-        title: 'لا توجد طلبات',
-        subtitle: 'ستظهر طلباتك هنا',
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+          const EmptyState(
+            icon: Icons.receipt_long_outlined,
+            title: 'لا توجد طلبات في هذا القسم',
+            subtitle: 'ستظهر طلباتك فور إنشائها وتحديث حالتها هنا',
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: () => ref.read(ordersProvider.notifier).loadOrders(),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('تحديث الطلبات'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: orders.length,
       itemBuilder: (context, index) {

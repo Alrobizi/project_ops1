@@ -18,9 +18,11 @@ return new class extends Migration
 
         // إدراج إعدادات افتراضية
         $settings = [
-            ['key' => 'store_name', 'value' => 'متجر الإلكترونيات', 'group' => 'general'],
+            ['key' => 'store_name', 'value' => 'متجر بركات عدن', 'group' => 'general'],
             ['key' => 'store_email', 'value' => 'info@store.com', 'group' => 'general'],
-            ['key' => 'store_phone', 'value' => '777123456', 'group' => 'general'],
+            ['key' => 'store_phone', 'value' => '772055335', 'group' => 'general'],
+            ['key' => 'whatsapp_number', 'value' => '772055335', 'group' => 'general'],
+            ['key' => 'whatsapp_transfer_number', 'value' => '772055335', 'group' => 'general'],
             ['key' => 'store_address', 'value' => 'صنعاء، اليمن', 'group' => 'general'],
             ['key' => 'store_currency', 'value' => 'YER', 'group' => 'general'],
             ['key' => 'store_language', 'value' => 'ar', 'group' => 'general'],

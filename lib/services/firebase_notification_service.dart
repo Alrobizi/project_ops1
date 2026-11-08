@@ -112,21 +112,23 @@ class FirebaseNotificationService {
   static Future<void> _getToken() async {
     try {
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        final apns = await _messaging.getAPNSToken().timeout(
-          const Duration(seconds: 3),
-          onTimeout: () => null,
-        );
-        if (apns == null) {
-          debugPrint('⚠️ APNs token not available on iOS (sideloaded/simulator). Skipping FCM token.');
-          return;
+        try {
+          final apns = await _messaging.getAPNSToken().timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => null,
+          );
+          debugPrint('🍏 iOS APNs Token: $apns');
+        } catch (e) {
+          debugPrint('⚠️ APNs check note: $e');
         }
       }
+
       _fcmToken = await _messaging.getToken().timeout(
-        const Duration(seconds: 4),
+        const Duration(seconds: 5),
         onTimeout: () => null,
       );
       debugPrint('🔑 FCM Token: $_fcmToken');
-      if (_fcmToken != null) {
+      if (_fcmToken != null && _fcmToken!.isNotEmpty) {
         await _sendTokenToServer(_fcmToken!);
       }
     } catch (e) {
