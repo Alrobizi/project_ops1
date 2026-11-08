@@ -1340,6 +1340,21 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   Widget _buildErrorState(String error) {
+    // تحديد نوع الخطأ وعرض رسالة مناسبة
+    final bool isAuthError = error.contains('انتهت') ||
+        error.contains('تسجيل الدخول') ||
+        error.contains('401') ||
+        error.contains('Unauthenticated');
+    final bool isNetworkError = error.contains('تحقق من الاتصال') ||
+        error.contains('ConnectionError') ||
+        error.contains('SocketException');
+
+    final String userMessage = isAuthError
+        ? 'انتهت جلسة تسجيل الدخول\nيرجى تسجيل الدخول من جديد'
+        : isNetworkError
+            ? 'تعذر الاتصال بالخادم\nتحقق من اتصالك بالإنترنت'
+            : 'تعذر تحميل الطلبات\nاضغط على إعادة المحاولة';
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
@@ -1350,17 +1365,16 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.receipt_long_outlined, size: 70, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text(
-                  'تعذر تحميل الطلبات',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Icon(
+                  isAuthError ? Icons.lock_outline_rounded : Icons.wifi_off_rounded,
+                  size: 70,
+                  color: Colors.grey.shade400,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 Text(
-                  error,
+                  userMessage,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, height: 1.6),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(

@@ -480,9 +480,7 @@ class OrdersState {
 class OrdersNotifier extends StateNotifier<OrdersState> {
   final OrderService _orderService;
 
-  OrdersNotifier(this._orderService) : super(OrdersState()) {
-    loadOrders();
-  }
+  OrdersNotifier(this._orderService) : super(OrdersState());
 
   Future<void> loadOrders() async {
     state = state.copyWith(isLoading: true, error: null);
@@ -490,7 +488,8 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
       final orders = await _orderService.getOrders();
       state = state.copyWith(orders: orders, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = e.toString().replaceAll('Exception: ', '');
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -524,6 +523,7 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
 final ordersProvider = StateNotifierProvider<OrdersNotifier, OrdersState>((ref) {
   final isAuth = ref.watch(authProvider.select((s) => s.isAuthenticated));
   final notifier = OrdersNotifier(ref.watch(orderServiceProvider));
+  // جلب الطلبات فقط عند تسجيل الدخول وليس بشكل أعمى
   if (isAuth) {
     Future.microtask(() => notifier.loadOrders());
   }

@@ -42,7 +42,10 @@ class ApiClient {
         return handler.next(options);
       },
       onError: (error, handler) {
-        // معالجة الأخطاء هنا
+        // إذا انتهت صلاحية التوكن أو كان غير صالح - تسجيل الخروج التلقائي
+        if (error.response?.statusCode == 401) {
+          _token = null;
+        }
         return handler.next(error);
       },
     ));
@@ -435,10 +438,21 @@ class OrderService {
       return DummyData.orders;
     }
 
-    final response = await _apiClient.get('/orders');
-    return (response.data['data'] as List)
-        .map((e) => Order.fromJson(e))
-        .toList();
+    try {
+      final response = await _apiClient.get('/orders');
+      final data = response.data['data'];
+      if (data == null || data is! List) return [];
+      return data.map((e) => Order.fromJson(e)).toList();
+    } on DioException catch (e) {
+      final code = e.response?.statusCode;
+      if (code == 401) {
+        throw Exception('انتهت جلسة تسجيل الدخول، يرجى إعادة تسجيل الدخول');
+      }
+      if (code == 422) {
+        throw Exception('خطأ في البيانات المرسلة، يرجى إعادة المحاولة');
+      }
+      throw Exception('تعذر تحميل الطلبات، تحقق من الاتصال وأعد المحاولة');
+    }
   }
 
   /// جلب طلب واحد
