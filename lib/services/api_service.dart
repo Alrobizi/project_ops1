@@ -5,10 +5,31 @@
 
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:dio/dio.dart';
+import 'dart:async';
 import '../models/models.dart';
 import '../models/notification.dart';
 import '../data/dummy_data.dart';
 import 'firebase_notification_service.dart';
+
+/// صفحة واحدة من قائمة الإشعارات (تدعم التحميل التدريجي والترقيم)
+class NotificationPage {
+  const NotificationPage({
+    required this.notifications,
+    required this.unreadCount,
+    required this.page,
+    required this.lastPage,
+    required this.total,
+  });
+
+  final List<AppNotification> notifications;
+  final int unreadCount;
+  final int page;
+  final int lastPage;
+  final int total;
+
+  /// هل توجد صفحات إضافية لم تُحمَّل بعد؟
+  bool get hasMore => page < lastPage;
+}
 
 /// كلاس ApiClient يغلف Dio مع interceptor للتوكن
 class ApiClient {
@@ -20,13 +41,45 @@ class ApiClient {
       false; // تغيير إلى true للعمل بالبيانات التجريبية بدون سيرفر
 
   late final Dio _dio;
-  String? _token;
+
+  /// توكن المصادقة المشترك بين جميع نسخ ApiClient.
+  /// بعض الخدمات (مثل إشعارات FCM) تُنشئ نسخة خاصة قبل تسجيل الدخول،
+  /// ولو كان الحقل خاصاً بكل نسخة لبقي التوكن مفقوداً فيها.
+  static String? _token;
+
+  // ============================================
+  // إعدادات الشبكة — مضبوطة على استضافة Render
+  // ============================================
+  //
+  // Render (الخطة المجانية) يُنيم الخدمة بعد ~15 دقيقة خمول، وأول طلب بعد
+  // النوم ينتظر 30–60 ثانية حتى تُقلع الحاوية (cold start)، وأحياناً يرد
+  // بروكسي Render بـ 502/503 قبل أن يجهز التطبيق. لذلك:
+  //   • receiveTimeout طويل لأن الخادم يستقبل الاتصال فوراً ثم يتأخّر بالرد.
+  //   • الطلبات الآمنة الإعادة (GET وتوكن FCM) تُعاد تلقائياً عند 502/503/504
+  //     أو عند مهلة الاستجابة، بدل إظهار خطأ لمستخدم لم يفعل شيئاً.
+
+  static const Duration connectTimeout = Duration(seconds: 20);
+
+  /// يجب أن يبقى أطول من إقلاع Render وأقصر من صبر المستخدم على شاشة معلّقة
+  static const Duration receiveTimeout = Duration(seconds: 60);
+
+  /// عدد محاولات GET (الأصلية + إعادة واحدة)
+  ///
+  /// محاولتان فقط: إعادة كافية لتجاوز 502 لحظة الإقلاع، ولا تُطيل انتظار
+  /// المستخدم دقائق إن كان الخادم متوقفاً فعلاً (كل محاولة تنتظر حتى 60s).
+  static const int _getAttempts = 2;
+
+  /// انتظار بين المحاولات — الطلب الثاني غالباً يسبق الخادم وهو مُقلع
+  static const List<Duration> _retryDelays = [
+    Duration(seconds: 2),
+    Duration(seconds: 5),
+  ];
 
   ApiClient() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: connectTimeout,
+      receiveTimeout: receiveTimeout,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -56,14 +109,93 @@ class ApiClient {
     setFcmApiClient(this);
     FirebaseNotificationService.syncToken();
   }
+
   void clearToken() => _token = null;
 
   /// التوكن الحالي (يُستخدم عند استعادة بيانات المستخدم بعد إعادة التشغيل)
   String? get token => _token;
 
-  // GET request
-  Future<Response> get(String path, {Map<String, dynamic>? queryParams}) async {
-    return await _dio.get(path, queryParameters: queryParams);
+  /// هل الخطأ عابر (خادم Render ما زال يُقلع / بطء مؤقت) ويستحق إعادة الطلب؟
+  ///
+  /// لا نُعيد المحاولة على أخطاء الشبكة الحقيقية (لا إنترنت، فشل DNS)،
+  /// حتى لا ينتظر المستخدم دقيقة كاملة ليعرف أن اتصاله مقطوع.
+  static bool _isTransient(Object error) {
+    if (error is! DioException) {
+      return false;
+    }
+
+    if (error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return true;
+    }
+
+    if (error.type == DioExceptionType.badResponse) {
+      final status = error.response?.statusCode;
+      // 502/503/504 هي ردود بروكسي Render أثناء إقلاع الخدمة أو انشغالها
+      return status == 502 || status == 503 || status == 504;
+    }
+
+    return false;
+  }
+
+  /// طلب GET — يُعاد تلقائياً إن كان الخادم ما زال يُقلع على Render.
+  ///
+  /// GET آمن للإعادة (idempotent) بخلاف POST/PATCH، لذلك لا نُعيد الطلبات
+  /// المُعدِّلة هنا حتى لا يتكرّر إنشاء طلب شراء أو خصم محفظة مرتين.
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParams,
+    int attempts = _getAttempts,
+  }) async {
+    final total = attempts < 1 ? 1 : attempts;
+
+    for (var attempt = 1;; attempt++) {
+      try {
+        return await _dio.get(path, queryParameters: queryParams);
+      } on DioException catch (e) {
+        if (attempt >= total || !_isTransient(e)) {
+          rethrow;
+        }
+
+        final delay = _retryDelays[attempt - 1];
+        debugPrint(
+          '⏳ إعادة محاولة GET $path (${attempt + 1}/$total) بعد '
+          '${delay.inSeconds}s — '
+          '${e.response?.statusCode ?? e.type.name}',
+        );
+        await Future<void>.delayed(delay);
+      }
+    }
+  }
+
+  /// إيقاظ الخادم في الخلفية قبل أول تفاعل للمستخدم.
+  ///
+  /// على Render ننام 15 دقيقة بعد آخر طلب، فإذا فتح المستخدم التطبيق بعد
+  /// ساعة فإن أول طلب (تسجيل الدخول مثلاً) يدفع كامل زمن الإقلاع. إرسال
+  /// طلب خفيف على نقطة عامة أثناء ظهور شاشة الدخول يجعل الإقلاع يحدث
+  /// بالتوازي مع كتابة المستخدم لبياناته بدل أن ينتظره.
+  ///
+  /// لا ننتظر النتيجة ولا نُظهر أي خطأ — فشله لا يعني شيئاً.
+  static void warmUp() {
+    if (useDummyData) {
+      return;
+    }
+
+    final dio = Dio(BaseOptions(
+      connectTimeout: connectTimeout,
+      receiveTimeout: receiveTimeout,
+      headers: {'Accept': 'application/json'},
+    ));
+
+    unawaited(() async {
+      try {
+        await dio.get<dynamic>('$serverUrl/api/settings');
+      } catch (_) {
+        // مجرّد محاولة إيقاظ — أي استجابة (حتى خطأ) تعني أن الخدمة تعمل
+      } finally {
+        dio.close(force: true);
+      }
+    }());
   }
 
   // POST request
@@ -100,38 +232,159 @@ class ApiClient {
   }
 
   /// إرسال توكن FCM للسيرفر (يتطلب تسجيل الدخول)
-  Future<void> sendFcmToken(String fcmToken) async {
-    try {
-      if (_token == null || _token!.isEmpty) {
-        debugPrint('⚠️ تخطي إرسال توكن FCM لعدم وجود توكن مصادقة حالي للمستخدم');
-        return;
+  ///
+  /// يُرجع `true` عند نجاح الحفظ حتى نتمكن من تجنّب إعادة الإرسال
+  /// في كل مرة يُفتح فيها التطبيق (انظر FirebaseNotificationService).
+  ///
+  /// يعمل في الخلفية بلا واجهة، لذا يُسمح له بمحاولات متعددة (مهلة 60s
+  /// وفواصل إعادة) ليتجاوز إقلاع Render البطيء بدل أن يضيع توكن الجهاز
+  /// ويبقى المستخدم بلا إشعارات طوال الجلسة.
+  Future<bool> sendFcmToken(String fcmToken) async {
+    if (_token == null || _token!.isEmpty) {
+      debugPrint('⚠️ تخطي إرسال توكن FCM لعدم وجود توكن مصادقة حالي للمستخدم');
+      return false;
+    }
+
+    const maxAttempts = 3;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final res = await _dio.post(
+          '/user/fcm-token',
+          data: {'fcm_token': fcmToken},
+          options: Options(
+            receiveTimeout: receiveTimeout,
+            sendTimeout: const Duration(seconds: 30),
+          ),
+        );
+        final status = res.statusCode ?? 0;
+        debugPrint('✅ تم حفظ توكن FCM في حساب المستخدم بنجاح: $status');
+        return status >= 200 && status < 300;
+      } on DioException catch (e) {
+        final status = e.response?.statusCode;
+        final retryable = attempt < maxAttempts && _isTransient(e);
+
+        debugPrint(
+          '❌ خطأ في إرسال توكن FCM للسيرفر: $status ${e.message} '
+          '(محاولة $attempt/$maxAttempts)',
+        );
+
+        // 401/422/500 أخطاء حقيقية: إعادة المحاولة لن تغيّر النتيجة
+        if (!retryable) {
+          return false;
+        }
+
+        await Future<void>.delayed(_retryDelays[attempt - 1]);
+      } catch (e) {
+        debugPrint('❌ خطأ في إرسال توكن FCM للسيرفر: $e');
+        return false;
       }
-      final res = await _dio.post('/user/fcm-token', data: {'fcm_token': fcmToken});
-      debugPrint('✅ تم حفظ توكن FCM في حساب المستخدم بنجاح: ${res.statusCode}');
+    }
+
+    return false;
+  }
+
+  /// حذف توكن FCM من حساب المستخدم الحالي (قبل تسجيل الخروج)
+  ///
+  /// يمنع وصول إشعارات هذا الحساب إلى جهاز استخدمه شخص آخر بعد الخروج.
+  /// على Render قد يفشل هذا الطلب أثناء نوم الخدمة، لكن الحماية لا تعتمد
+  /// عليه وحده: الخادم يفصل التوكن أيضاً عند `POST /logout`، وعند ربط نفس
+  /// التوكن بحساب آخر يُفصل تلقائياً عن الحساب السابق.
+  Future<void> clearFcmToken() async {
+    if (_token == null || _token!.isEmpty) {
+      return;
+    }
+
+    try {
+      await _dio.delete(
+        '/user/fcm-token',
+        options: Options(
+          receiveTimeout: receiveTimeout,
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      debugPrint('✅ تم حذف توكن FCM من الحساب');
     } catch (e) {
-      debugPrint('❌ خطأ في إرسال توكن FCM للسيرفر: $e');
+      debugPrint('⚠️ تعذّر حذف توكن FCM من السيرفر: $e');
     }
   }
 
-  /// جلب الإشعارات الخاصة بالمستخدم
-  Future<Map<String, dynamic>> getNotifications() async {
-    final response = await get('/notifications');
-    return {
-      'notifications': (response.data['data'] as List)
-          .map((e) => AppNotification.fromJson(e))
-          .toList(),
-      'unread_count': response.data['unread_count'] ?? 0,
-    };
+  /// جلب الإشعارات الخاصة بالمستخدم (مع تقسيم الصفحات)
+  Future<NotificationPage> getNotifications({int page = 1}) async {
+    final response = await get('/notifications', queryParams: {'page': page});
+    final body = response.data;
+
+    final raw = (body is Map && body['data'] is List)
+        ? body['data'] as List
+        : const <dynamic>[];
+
+    final meta = (body is Map && body['meta'] is Map)
+        ? Map<String, dynamic>.from(body['meta'] as Map)
+        : const <String, dynamic>{};
+
+    final notifications = <AppNotification>[];
+    for (final item in raw) {
+      if (item is Map) {
+        final parsed = AppNotification.fromJson(
+          Map<String, dynamic>.from(item),
+        );
+        if (parsed != null) {
+          notifications.add(parsed);
+        }
+      }
+    }
+
+    return NotificationPage(
+      notifications: notifications,
+      unreadCount: _asInt(body is Map ? body['unread_count'] : null),
+      page: _asInt(meta['current_page'], fallback: page),
+      lastPage: _asInt(meta['last_page'], fallback: page),
+      total: _asInt(meta['total']),
+    );
   }
 
-  /// تعليم إشعار كمقروء
-  Future<void> markNotificationAsRead(String id) async {
-    await patch('/notifications/$id/read');
+  /// تعليم إشعار كمقروء — يُرجع false إذا فشل الطلب
+  /// (لتتمكن الواجهة من التراجع عن التحديث المتفائل)
+  Future<bool> markNotificationAsRead(String id) async {
+    try {
+      await patch('/notifications/$id/read');
+      return true;
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      // مقروء مسبقاً أو غير موجود: لا حاجة للتراجع في الواجهة
+      if (status == 404 || status == 409) {
+        return true;
+      }
+      debugPrint('❌ تعذّر تعليم الإشعار كمقروء: $status ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('❌ تعذّر تعليم الإشعار كمقروء: $e');
+      return false;
+    }
   }
 
-  /// تعليم كل الإشعارات كمقروءة
-  Future<void> markAllNotificationsAsRead() async {
-    await post('/notifications/read-all');
+  /// تعليم كل الإشعارات كمقروءة — يُرجع false إذا فشل الطلب
+  Future<bool> markAllNotificationsAsRead() async {
+    try {
+      await post('/notifications/read-all');
+      return true;
+    } catch (e) {
+      debugPrint('❌ تعذّر تعليم كل الإشعارات كمقروءة: $e');
+      return false;
+    }
+  }
+
+  static int _asInt(dynamic value, {int fallback = 0}) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? fallback;
+    }
+    return fallback;
   }
 
   /// بدء عملية الدفع بالمحفظة
@@ -301,6 +554,10 @@ class AuthService {
   Future<void> logout() async {
     try {
       if (!ApiClient.useDummyData) {
+        // ١) فصل الجهاز عن الحساب: حذف توكن FCM قبل إبطال توكن المصادقة
+        //    (وإلا ظل الجهاز يستقبل إشعارات هذا الحساب بعد خروج المستخدم)
+        await FirebaseNotificationService.unregisterFromServer();
+        // ٢) إبطال جلسة السيرفر
         await _apiClient.post('/logout');
       }
     } catch (_) {
@@ -573,8 +830,20 @@ class BannerService {
     if (ApiClient.useDummyData) {
       await Future.delayed(const Duration(milliseconds: 300));
       return [
-        {'id': 1, 'title': 'تخفيضات الصيف', 'image': '', 'link': '', 'sort_order': 1},
-        {'id': 2, 'title': 'منتجات جديدة', 'image': '', 'link': '', 'sort_order': 2},
+        {
+          'id': 1,
+          'title': 'تخفيضات الصيف',
+          'image': '',
+          'link': '',
+          'sort_order': 1
+        },
+        {
+          'id': 2,
+          'title': 'منتجات جديدة',
+          'image': '',
+          'link': '',
+          'sort_order': 2
+        },
       ];
     }
 
@@ -588,9 +857,30 @@ class BannerService {
     if (ApiClient.useDummyData) {
       await Future.delayed(const Duration(milliseconds: 300));
       return [
-        {'id': 1, 'title': 'تخفيضات الصيف', 'image': '', 'link': '/summer-sale', 'sort_order': 1, 'is_active': true},
-        {'id': 2, 'title': 'منتجات جديدة', 'image': '', 'link': '/new-arrivals', 'sort_order': 2, 'is_active': true},
-        {'id': 3, 'title': 'عرض الجمعة', 'image': '', 'link': '/friday-deals', 'sort_order': 3, 'is_active': false},
+        {
+          'id': 1,
+          'title': 'تخفيضات الصيف',
+          'image': '',
+          'link': '/summer-sale',
+          'sort_order': 1,
+          'is_active': true
+        },
+        {
+          'id': 2,
+          'title': 'منتجات جديدة',
+          'image': '',
+          'link': '/new-arrivals',
+          'sort_order': 2,
+          'is_active': true
+        },
+        {
+          'id': 3,
+          'title': 'عرض الجمعة',
+          'image': '',
+          'link': '/friday-deals',
+          'sort_order': 3,
+          'is_active': false
+        },
       ];
     }
 
@@ -730,8 +1020,7 @@ class AdminProductService {
       'is_active': isActive,
       'is_featured': isFeatured,
     });
-    return Product.fromJson(
-        Map<String, dynamic>.from(response.data['data']));
+    return Product.fromJson(Map<String, dynamic>.from(response.data['data']));
   }
 
   /// تعديل منتج (الاسم، السعر، التصنيف، المخزون...)
@@ -768,8 +1057,7 @@ class AdminProductService {
     }
 
     final response = await _apiClient.put('/admin/products/$id', data: data);
-    return Product.fromJson(
-        Map<String, dynamic>.from(response.data['data']));
+    return Product.fromJson(Map<String, dynamic>.from(response.data['data']));
   }
 
   /// حذف منتج

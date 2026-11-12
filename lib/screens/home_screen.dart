@@ -58,12 +58,10 @@ class HomeScreen extends ConsumerWidget {
                       children: [
                         // الترحيب والإشعارات وفلتر الموقع
                         Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'مرحباً 👋',
@@ -91,16 +89,18 @@ class HomeScreen extends ConsumerWidget {
                                 const SizedBox(width: 8),
                                 Consumer(
                                   builder: (context, ref, child) {
-                                    final notificationsState =
-                                        ref.watch(notificationsProvider);
-                                    final unread =
-                                        notificationsState.unreadCount;
+                                    // يستمع للعدّاد وحده (select) فلا يُعاد بناء
+                                    // هذا الجزء عند كل تحديث لقائمة الإشعارات.
+                                    final unread = ref.watch(
+                                      unreadNotificationsCountProvider,
+                                    );
 
                                     return Stack(
                                       children: [
                                         Container(
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.2),
+                                            color:
+                                                Colors.white.withOpacity(0.2),
                                             borderRadius:
                                                 BorderRadius.circular(12),
                                           ),
@@ -119,21 +119,17 @@ class HomeScreen extends ConsumerWidget {
                                             top: 4,
                                             right: 4,
                                             child: Container(
-                                              padding:
-                                                  const EdgeInsets.all(4),
+                                              padding: const EdgeInsets.all(4),
                                               decoration: const BoxDecoration(
                                                 color: Color(0xFFEF4444),
                                                 shape: BoxShape.circle,
                                               ),
-                                              constraints:
-                                                  const BoxConstraints(
+                                              constraints: const BoxConstraints(
                                                 minWidth: 18,
                                                 minHeight: 18,
                                               ),
                                               child: Text(
-                                                unread > 99
-                                                    ? '99+'
-                                                    : '$unread',
+                                                unread > 99 ? '99+' : '$unread',
                                                 style: const TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 10,
@@ -520,7 +516,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: category.image != null &&
@@ -535,13 +533,15 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                           memCacheWidth: 300,
                                           placeholder: (context, url) => Icon(
                                             _getCategoryIcon(category.icon),
-                                            color: Theme.of(context).primaryColor,
+                                            color:
+                                                Theme.of(context).primaryColor,
                                             size: 24,
                                           ),
                                           errorWidget: (context, url, error) =>
                                               Icon(
                                             _getCategoryIcon(category.icon),
-                                            color: Theme.of(context).primaryColor,
+                                            color:
+                                                Theme.of(context).primaryColor,
                                             size: 24,
                                           ),
                                         ),
@@ -596,12 +596,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                           vertical: 8,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Theme.of(context).primaryColor
+                                          color: Theme.of(context)
+                                              .primaryColor
                                               .withValues(alpha: 0.05),
                                           borderRadius:
                                               BorderRadius.circular(20),
                                           border: Border.all(
-                                            color: Theme.of(context).primaryColor
+                                            color: Theme.of(context)
+                                                .primaryColor
                                                 .withValues(alpha: 0.2),
                                           ),
                                         ),
@@ -609,7 +611,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                           subcategory.name,
                                           style: TextStyle(
                                             fontSize: 13,
-                                            color: Theme.of(context).primaryColor,
+                                            color:
+                                                Theme.of(context).primaryColor,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -976,8 +979,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                   onSelected: (selected) {
                                     setState(() => _selectedSize = size);
                                   },
-                                  selectedColor:
-                                      Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                                  selectedColor: Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: 0.2),
                                   labelStyle: TextStyle(
                                     color: isSelected
                                         ? Theme.of(context).primaryColor
@@ -1224,7 +1228,8 @@ class _BannerSliderState extends ConsumerState<BannerSlider> {
                 onPageChanged: (index) => setState(() => _currentIndex = index),
                 itemBuilder: (context, index) {
                   final banner = banners.isNotEmpty ? banners[index] : null;
-                  final bannerTitle = banner?.title ?? 'عروض شي ان: خصم حتى 70%';
+                  final bannerTitle =
+                      banner?.title ?? 'عروض شي ان: خصم حتى 70%';
                   final bannerLink = banner?.link ?? '/products?featured=1';
                   final bannerImageUrl = banner?.image ?? '';
 
@@ -1314,7 +1319,8 @@ class _BannerSliderState extends ConsumerState<BannerSlider> {
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFFE11D48).withOpacity(0.4),
+                                      color: const Color(0xFFE11D48)
+                                          .withOpacity(0.4),
                                       blurRadius: 8,
                                       offset: const Offset(0, 3),
                                     ),

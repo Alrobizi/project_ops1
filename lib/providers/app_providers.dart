@@ -3,10 +3,13 @@
 // Auth, Cart, Wishlist, Orders
 // ============================================
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart' show DioException;
+import 'package:dio/dio.dart' show DioException, DioExceptionType;
+import 'package:firebase_messaging/firebase_messaging.dart' show RemoteMessage;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -29,10 +32,14 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   setFcmApiClient(client);
   return client;
 });
-final authServiceProvider = Provider<AuthService>((ref) => AuthService(ref.watch(apiClientProvider)));
-final productServiceProvider = Provider<ProductService>((ref) => ProductService(ref.watch(apiClientProvider)));
-final categoryServiceProvider = Provider<CategoryService>((ref) => CategoryService(ref.watch(apiClientProvider)));
-final orderServiceProvider = Provider<OrderService>((ref) => OrderService(ref.watch(apiClientProvider)));
+final authServiceProvider =
+    Provider<AuthService>((ref) => AuthService(ref.watch(apiClientProvider)));
+final productServiceProvider = Provider<ProductService>(
+    (ref) => ProductService(ref.watch(apiClientProvider)));
+final categoryServiceProvider = Provider<CategoryService>(
+    (ref) => CategoryService(ref.watch(apiClientProvider)));
+final orderServiceProvider =
+    Provider<OrderService>((ref) => OrderService(ref.watch(apiClientProvider)));
 
 // ============================================
 // Auth State & Provider
@@ -118,7 +125,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final user = await _authService.login(email, password);
-      await _storage.write(key: 'auth_token', value: user.token ?? 'dummy_token');
+      await _storage.write(
+          key: 'auth_token', value: user.token ?? 'dummy_token');
       state = state.copyWith(
         user: user,
         isLoading: false,
@@ -147,7 +155,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         phone: phone,
         password: password,
       );
-      await _storage.write(key: 'auth_token', value: user.token ?? 'dummy_token');
+      await _storage.write(
+          key: 'auth_token', value: user.token ?? 'dummy_token');
       state = state.copyWith(
         user: user,
         isLoading: false,
@@ -199,7 +208,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         avatar: googleUser.photoUrl,
       );
 
-      await _storage.write(key: 'auth_token', value: user.token ?? 'dummy_token');
+      await _storage.write(
+          key: 'auth_token', value: user.token ?? 'dummy_token');
       state = state.copyWith(
         user: user,
         isLoading: false,
@@ -209,7 +219,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'فشل تسجيل الدخول بواسطة Google: ${e.toString().replaceAll('Exception: ', '')}',
+        error:
+            'فشل تسجيل الدخول بواسطة Google: ${e.toString().replaceAll('Exception: ', '')}',
       );
     }
   }
@@ -249,7 +260,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// تحديث بيانات الملف الشخصي وحفظها بالسيرفر
-  Future<bool> updateProfile({String? name, String? phone, String? email}) async {
+  Future<bool> updateProfile(
+      {String? name, String? phone, String? email}) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final updatedUser = await _authService.updateProfile(
@@ -326,9 +338,13 @@ class CartNotifier extends StateNotifier<CartState> {
   static const double freeShippingThreshold = 200;
   static const double shippingCost = 25;
 
-  void addItem(Product product, {int quantity = 1, String color = '', String size = ''}) {
+  void addItem(Product product,
+      {int quantity = 1, String color = '', String size = ''}) {
     final existingIndex = state.items.indexWhere(
-      (item) => item.product.id == product.id && item.selectedColor == color && item.selectedSize == size,
+      (item) =>
+          item.product.id == product.id &&
+          item.selectedColor == color &&
+          item.selectedSize == size,
     );
 
     List<CartItem> newItems;
@@ -379,7 +395,8 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 
   void _updateCart(List<CartItem> items) {
-    final subtotal = items.fold<double>(0, (sum, item) => sum + item.totalPrice);
+    final subtotal =
+        items.fold<double>(0, (sum, item) => sum + item.totalPrice);
     final shipping = subtotal >= freeShippingThreshold ? 0.0 : shippingCost;
     final total = subtotal + shipping;
     final itemsCount = items.fold(0, (sum, item) => sum + item.quantity);
@@ -393,9 +410,9 @@ class CartNotifier extends StateNotifier<CartState> {
     );
   }
 
-  double get remainingForFreeShipping => 
-      freeShippingThreshold - state.subtotal > 0 
-          ? freeShippingThreshold - state.subtotal 
+  double get remainingForFreeShipping =>
+      freeShippingThreshold - state.subtotal > 0
+          ? freeShippingThreshold - state.subtotal
           : 0;
 }
 
@@ -446,7 +463,8 @@ class WishlistNotifier extends StateNotifier<WishlistState> {
   bool isFavorite(String productId) => state.productIds.contains(productId);
 }
 
-final wishlistProvider = StateNotifierProvider<WishlistNotifier, WishlistState>((ref) {
+final wishlistProvider =
+    StateNotifierProvider<WishlistNotifier, WishlistState>((ref) {
   return WishlistNotifier();
 });
 
@@ -520,7 +538,8 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
   }
 }
 
-final ordersProvider = StateNotifierProvider<OrdersNotifier, OrdersState>((ref) {
+final ordersProvider =
+    StateNotifierProvider<OrdersNotifier, OrdersState>((ref) {
   final isAuth = ref.watch(authProvider.select((s) => s.isAuthenticated));
   final notifier = OrdersNotifier(ref.watch(orderServiceProvider));
   // جلب الطلبات فقط عند تسجيل الدخول وليس بشكل أعمى
@@ -613,7 +632,8 @@ class ProductsState {
         isLoading: isLoading ?? this.isLoading,
         error: error,
         selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
-        selectedSubcategoryId: selectedSubcategoryId ?? this.selectedSubcategoryId,
+        selectedSubcategoryId:
+            selectedSubcategoryId ?? this.selectedSubcategoryId,
         searchQuery: searchQuery ?? this.searchQuery,
         useGpsLocation: useGpsLocation ?? this.useGpsLocation,
         userLatitude: userLatitude ?? this.userLatitude,
@@ -627,7 +647,8 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
   final ProductService _productService;
   final CategoryService _categoryService;
 
-  ProductsNotifier(this._productService, this._categoryService) : super(ProductsState()) {
+  ProductsNotifier(this._productService, this._categoryService)
+      : super(ProductsState()) {
     loadData();
   }
 
@@ -704,7 +725,9 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 
     // فلترة حسب القسم الفرعي إذا تم تحديده
     if (state.selectedSubcategoryId != null) {
-      result = result.where((p) => p.categoryId == state.selectedSubcategoryId).toList();
+      result = result
+          .where((p) => p.categoryId == state.selectedSubcategoryId)
+          .toList();
     }
     // فلترة حسب التصنيف الرئيسي وأقسامه الفرعية
     else if (state.selectedCategoryId != null) {
@@ -723,10 +746,11 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     }
 
     if (state.searchQuery.isNotEmpty) {
-      result = result.where((p) =>
-        p.name.contains(state.searchQuery) ||
-        p.description.contains(state.searchQuery)
-      ).toList();
+      result = result
+          .where((p) =>
+              p.name.contains(state.searchQuery) ||
+              p.description.contains(state.searchQuery))
+          .toList();
     }
 
     // ----- فرز حسب الموقع الجغرافي (Location Filter) -----
@@ -751,7 +775,8 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
       state.products.where((p) => p.isBestSeller).toList();
 }
 
-final productsProvider = StateNotifierProvider<ProductsNotifier, ProductsState>((ref) {
+final productsProvider =
+    StateNotifierProvider<ProductsNotifier, ProductsState>((ref) {
   return ProductsNotifier(
     ref.watch(productServiceProvider),
     ref.watch(categoryServiceProvider),
@@ -790,8 +815,9 @@ class LocationFilterState {
   });
 
   /// وسم الموقع كما يظهر في شريط الفلتر بالواجهة
-  String get label =>
-      mode == LocationFilterMode.gps ? 'موقعي الحالي (GPS)' : '$governorate - $city';
+  String get label => mode == LocationFilterMode.gps
+      ? 'موقعي الحالي (GPS)'
+      : '$governorate - $city';
 
   /// هل الفلتر على الوضع الافتراضي (عدن - كريتر) دون أي تخصيص؟
   bool get isDefault =>
@@ -991,12 +1017,10 @@ class ThemeColorNotifier extends StateNotifier<ThemeColorState> {
   void _applyToAppColors(Color color) {
     final hsl = HSLColor.fromColor(color);
     AppColors.primary = color;
-    AppColors.primaryAccent = hsl
-        .withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0))
-        .toColor();
-    AppColors.secondaryAccent = hsl
-        .withLightness((hsl.lightness + 0.20).clamp(0.0, 1.0))
-        .toColor();
+    AppColors.primaryAccent =
+        hsl.withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0)).toColor();
+    AppColors.secondaryAccent =
+        hsl.withLightness((hsl.lightness + 0.20).clamp(0.0, 1.0)).toColor();
   }
 
   Future<void> _loadThemeColor() async {
@@ -1025,7 +1049,8 @@ class ThemeColorNotifier extends StateNotifier<ThemeColorState> {
   }
 }
 
-final themeColorProvider = StateNotifierProvider<ThemeColorNotifier, ThemeColorState>((ref) {
+final themeColorProvider =
+    StateNotifierProvider<ThemeColorNotifier, ThemeColorState>((ref) {
   return ThemeColorNotifier();
 });
 
@@ -1182,8 +1207,7 @@ class AdminState {
         marketingViews: marketingViews ?? this.marketingViews,
         marketingClicks: marketingClicks ?? this.marketingClicks,
         marketingCtr: marketingCtr ?? this.marketingCtr,
-        marketingConversions:
-            marketingConversions ?? this.marketingConversions,
+        marketingConversions: marketingConversions ?? this.marketingConversions,
         customers: customers ?? this.customers,
         topCustomers: topCustomers ?? this.topCustomers,
         salesData: salesData ?? this.salesData,
@@ -1199,8 +1223,7 @@ class AdminState {
         storeSettings: storeSettings ?? this.storeSettings,
         paymentSettings: paymentSettings ?? this.paymentSettings,
         shippingSettings: shippingSettings ?? this.shippingSettings,
-        notificationSettings:
-            notificationSettings ?? this.notificationSettings,
+        notificationSettings: notificationSettings ?? this.notificationSettings,
       );
 }
 
@@ -1223,7 +1246,8 @@ class AdminNotifier extends StateNotifier<AdminState> {
             totalOrders: data['total_orders'] ?? state.totalOrders,
             totalCustomers: data['total_customers'] ?? state.totalCustomers,
             totalProducts: data['total_products'] ?? state.totalProducts,
-            totalSales: (data['total_sales'] as num?)?.toDouble() ?? state.totalSales,
+            totalSales:
+                (data['total_sales'] as num?)?.toDouble() ?? state.totalSales,
             activeCustomers: data['active_customers'] ?? state.activeCustomers,
             newCustomers: data['new_customers'] ?? state.newCustomers,
           );
@@ -1299,8 +1323,10 @@ class AdminNotifier extends StateNotifier<AdminState> {
           freeShippingThreshold: 200,
           deliveryDays: 3,
           shippingCompanies: [
-            ShippingCompany(id: '1', name: 'شركة التوصيل السريع', cost: 25, isActive: true),
-            ShippingCompany(id: '2', name: 'البريد اليمني', cost: 15, isActive: true),
+            ShippingCompany(
+                id: '1', name: 'شركة التوصيل السريع', cost: 25, isActive: true),
+            ShippingCompany(
+                id: '2', name: 'البريد اليمني', cost: 15, isActive: true),
             ShippingCompany(id: '3', name: 'أرامكس', cost: 35, isActive: false),
           ],
         ),
@@ -1320,7 +1346,8 @@ class AdminNotifier extends StateNotifier<AdminState> {
   }
 
   // عمليات التسويق
-  void addCampaign({required String title, required String type, double budget = 0}) {
+  void addCampaign(
+      {required String title, required String type, double budget = 0}) {
     final campaign = Campaign(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title,
@@ -1386,7 +1413,10 @@ class AdminNotifier extends StateNotifier<AdminState> {
       minOrder: minOrder,
       maxUsage: maxUsage,
       startDate: DateTime.now().toString().substring(0, 10),
-      endDate: DateTime.now().add(const Duration(days: 30)).toString().substring(0, 10),
+      endDate: DateTime.now()
+          .add(const Duration(days: 30))
+          .toString()
+          .substring(0, 10),
     );
     state = state.copyWith(discounts: [discount, ...state.discounts]);
   }
@@ -1610,30 +1640,156 @@ class AdminNotifier extends StateNotifier<AdminState> {
 
   // بيانات تجريبية
   static final List<Campaign> _dummyCampaigns = [
-    Campaign(id: '1', title: 'تخفيضات الصيف', type: 'حملة إعلانية', budget: 5000, views: 12000, clicks: 850, isActive: true),
-    Campaign(id: '2', title: 'عرض الجمعة البيضاء', type: 'عرض ترويجي', budget: 3000, views: 8500, clicks: 620, isActive: true),
-    Campaign(id: '3', title: 'إطلاق المنتجات الجديدة', type: 'إعلان ممول', budget: 8000, views: 15000, clicks: 1200, isActive: false),
+    Campaign(
+        id: '1',
+        title: 'تخفيضات الصيف',
+        type: 'حملة إعلانية',
+        budget: 5000,
+        views: 12000,
+        clicks: 850,
+        isActive: true),
+    Campaign(
+        id: '2',
+        title: 'عرض الجمعة البيضاء',
+        type: 'عرض ترويجي',
+        budget: 3000,
+        views: 8500,
+        clicks: 620,
+        isActive: true),
+    Campaign(
+        id: '3',
+        title: 'إطلاق المنتجات الجديدة',
+        type: 'إعلان ممول',
+        budget: 8000,
+        views: 15000,
+        clicks: 1200,
+        isActive: false),
   ];
 
   static final List<Ad> _dummyAds = [
-    Ad(id: '1', title: 'إعلان إنستغرام', platform: 'إنستغرام', startDate: '2026-07-01', endDate: '2026-07-31', isActive: true),
-    Ad(id: '2', title: 'إعلان فيسبوك', platform: 'فيسبوك', startDate: '2026-07-15', endDate: '2026-08-15', isActive: true),
-    Ad(id: '3', title: 'إعلان تيك توك', platform: 'تيك توك', startDate: '2026-06-01', endDate: '2026-06-30', isActive: false),
+    Ad(
+        id: '1',
+        title: 'إعلان إنستغرام',
+        platform: 'إنستغرام',
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+        isActive: true),
+    Ad(
+        id: '2',
+        title: 'إعلان فيسبوك',
+        platform: 'فيسبوك',
+        startDate: '2026-07-15',
+        endDate: '2026-08-15',
+        isActive: true),
+    Ad(
+        id: '3',
+        title: 'إعلان تيك توك',
+        platform: 'تيك توك',
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+        isActive: false),
   ];
 
   static final List<Promotion> _dummyPromotions = [
-    Promotion(id: '1', title: 'خصم العملاء الجدد', code: 'NEW10', discountPercent: 10, usedCount: 45, maxUsage: 100, isActive: true),
-    Promotion(id: '2', title: 'عرض نهاية الموسم', code: 'END30', discountPercent: 30, usedCount: 78, maxUsage: 100, isActive: true),
-    Promotion(id: '3', title: 'كود VIP', code: 'VIP50', discountPercent: 50, usedCount: 12, maxUsage: 50, isActive: false),
+    Promotion(
+        id: '1',
+        title: 'خصم العملاء الجدد',
+        code: 'NEW10',
+        discountPercent: 10,
+        usedCount: 45,
+        maxUsage: 100,
+        isActive: true),
+    Promotion(
+        id: '2',
+        title: 'عرض نهاية الموسم',
+        code: 'END30',
+        discountPercent: 30,
+        usedCount: 78,
+        maxUsage: 100,
+        isActive: true),
+    Promotion(
+        id: '3',
+        title: 'كود VIP',
+        code: 'VIP50',
+        discountPercent: 50,
+        usedCount: 12,
+        maxUsage: 50,
+        isActive: false),
   ];
 
   static final List<Customer> _dummyCustomers = [
-    Customer(id: '1', name: 'أحمد محمد', email: 'ahmed@email.com', phone: '777123456', city: 'صنعاء', registerDate: '2026-01-15', lastOrderDate: '2026-07-28', ordersCount: 12, totalSpent: 4500, isVip: true, isNew: false),
-    Customer(id: '2', name: 'سارة علي', email: 'sara@email.com', phone: '777654321', city: 'عدن', registerDate: '2026-06-20', lastOrderDate: '2026-07-30', ordersCount: 3, totalSpent: 850, isVip: false, isNew: true),
-    Customer(id: '3', name: 'خالد عبدالله', email: 'khaled@email.com', phone: '778111222', city: 'تعز', registerDate: '2026-03-10', lastOrderDate: '2026-07-25', ordersCount: 8, totalSpent: 3200, isVip: false, isNew: false),
-    Customer(id: '4', name: 'فاطمة حسن', email: 'fatima@email.com', phone: '779333444', city: 'صنعاء', registerDate: '2026-07-01', lastOrderDate: '2026-07-29', ordersCount: 2, totalSpent: 450, isVip: false, isNew: true),
-    Customer(id: '5', name: 'محمد سعيد', email: 'mohamed@email.com', phone: '770555666', city: 'الحديدة', registerDate: '2025-11-05', lastOrderDate: '2026-07-20', ordersCount: 15, totalSpent: 6800, isVip: true, isNew: false),
-    Customer(id: '6', name: 'نورا أحمد', email: 'nora@email.com', phone: '771777888', city: 'إب', registerDate: '2026-05-12', lastOrderDate: '2026-07-15', ordersCount: 5, totalSpent: 1800, isVip: false, isNew: false),
+    Customer(
+        id: '1',
+        name: 'أحمد محمد',
+        email: 'ahmed@email.com',
+        phone: '777123456',
+        city: 'صنعاء',
+        registerDate: '2026-01-15',
+        lastOrderDate: '2026-07-28',
+        ordersCount: 12,
+        totalSpent: 4500,
+        isVip: true,
+        isNew: false),
+    Customer(
+        id: '2',
+        name: 'سارة علي',
+        email: 'sara@email.com',
+        phone: '777654321',
+        city: 'عدن',
+        registerDate: '2026-06-20',
+        lastOrderDate: '2026-07-30',
+        ordersCount: 3,
+        totalSpent: 850,
+        isVip: false,
+        isNew: true),
+    Customer(
+        id: '3',
+        name: 'خالد عبدالله',
+        email: 'khaled@email.com',
+        phone: '778111222',
+        city: 'تعز',
+        registerDate: '2026-03-10',
+        lastOrderDate: '2026-07-25',
+        ordersCount: 8,
+        totalSpent: 3200,
+        isVip: false,
+        isNew: false),
+    Customer(
+        id: '4',
+        name: 'فاطمة حسن',
+        email: 'fatima@email.com',
+        phone: '779333444',
+        city: 'صنعاء',
+        registerDate: '2026-07-01',
+        lastOrderDate: '2026-07-29',
+        ordersCount: 2,
+        totalSpent: 450,
+        isVip: false,
+        isNew: true),
+    Customer(
+        id: '5',
+        name: 'محمد سعيد',
+        email: 'mohamed@email.com',
+        phone: '770555666',
+        city: 'الحديدة',
+        registerDate: '2025-11-05',
+        lastOrderDate: '2026-07-20',
+        ordersCount: 15,
+        totalSpent: 6800,
+        isVip: true,
+        isNew: false),
+    Customer(
+        id: '6',
+        name: 'نورا أحمد',
+        email: 'nora@email.com',
+        phone: '771777888',
+        city: 'إب',
+        registerDate: '2026-05-12',
+        lastOrderDate: '2026-07-15',
+        ordersCount: 5,
+        totalSpent: 1800,
+        isVip: false,
+        isNew: false),
   ];
 
   static final List<SalesDataPoint> _dummySalesData = [
@@ -1647,7 +1803,8 @@ class AdminNotifier extends StateNotifier<AdminState> {
   ];
 
   static final List<CategorySales> _dummyCategorySales = [
-    CategorySales(categoryName: 'الإلكترونيات', sales: 185000, percentage: 40.4),
+    CategorySales(
+        categoryName: 'الإلكترونيات', sales: 185000, percentage: 40.4),
     CategorySales(categoryName: 'الأزياء', sales: 120000, percentage: 26.2),
     CategorySales(categoryName: 'المنزل', sales: 78000, percentage: 17.0),
     CategorySales(categoryName: 'الجمال', sales: 45000, percentage: 9.8),
@@ -1655,7 +1812,8 @@ class AdminNotifier extends StateNotifier<AdminState> {
   ];
 
   static final List<ProductSales> _dummyTopProducts = [
-    ProductSales(name: 'سماعات بلوتوث', unitsSold: 245, revenue: 24500, stock: 50),
+    ProductSales(
+        name: 'سماعات بلوتوث', unitsSold: 245, revenue: 24500, stock: 50),
     ProductSales(name: 'ساعة ذكية', unitsSold: 180, revenue: 54000, stock: 30),
     ProductSales(name: 'حقيبة ظهر', unitsSold: 150, revenue: 12000, stock: 80),
     ProductSales(name: 'حذاء رياضي', unitsSold: 120, revenue: 18000, stock: 45),
@@ -1664,55 +1822,151 @@ class AdminNotifier extends StateNotifier<AdminState> {
 
   static final List<ProductSales> _dummyLowStockProducts = [
     ProductSales(name: 'ساعة ذكية', unitsSold: 180, revenue: 54000, stock: 5),
-    ProductSales(name: 'سماعات بلوتوث', unitsSold: 245, revenue: 24500, stock: 3),
+    ProductSales(
+        name: 'سماعات بلوتوث', unitsSold: 245, revenue: 24500, stock: 3),
     ProductSales(name: 'كاميرا رقمية', unitsSold: 45, revenue: 22500, stock: 2),
   ];
 
   static final List<RecentOrder> _dummyRecentOrders = [
-    RecentOrder(orderNumber: 'ORD-2026-001', customerName: 'أحمد محمد', total: 450),
-    RecentOrder(orderNumber: 'ORD-2026-002', customerName: 'سارة علي', total: 1200),
-    RecentOrder(orderNumber: 'ORD-2026-003', customerName: 'خالد عبدالله', total: 850),
-    RecentOrder(orderNumber: 'ORD-2026-004', customerName: 'فاطمة حسن', total: 320),
-    RecentOrder(orderNumber: 'ORD-2026-005', customerName: 'محمد سعيد', total: 2100),
+    RecentOrder(
+        orderNumber: 'ORD-2026-001', customerName: 'أحمد محمد', total: 450),
+    RecentOrder(
+        orderNumber: 'ORD-2026-002', customerName: 'سارة علي', total: 1200),
+    RecentOrder(
+        orderNumber: 'ORD-2026-003', customerName: 'خالد عبدالله', total: 850),
+    RecentOrder(
+        orderNumber: 'ORD-2026-004', customerName: 'فاطمة حسن', total: 320),
+    RecentOrder(
+        orderNumber: 'ORD-2026-005', customerName: 'محمد سعيد', total: 2100),
   ];
 
   static final List<Discount> _dummyDiscounts = [
-    Discount(id: '1', code: 'SAVE10', type: 'نسبة مئوية', value: 10, minOrder: 100, usedCount: 45, maxUsage: 100, startDate: '2026-07-01', endDate: '2026-08-31', status: DiscountStatus.active),
-    Discount(id: '2', code: 'SUMMER20', type: 'نسبة مئوية', value: 20, minOrder: 200, usedCount: 78, maxUsage: 100, startDate: '2026-06-01', endDate: '2026-08-31', status: DiscountStatus.active),
-    Discount(id: '3', code: 'WELCOME50', type: 'مبلغ ثابت', value: 50, minOrder: 300, usedCount: 100, maxUsage: 100, startDate: '2026-01-01', endDate: '2026-06-30', status: DiscountStatus.expired),
-    Discount(id: '4', code: 'EID15', type: 'نسبة مئوية', value: 15, minOrder: 150, usedCount: 0, maxUsage: 200, startDate: '2026-08-10', endDate: '2026-08-20', status: DiscountStatus.scheduled),
+    Discount(
+        id: '1',
+        code: 'SAVE10',
+        type: 'نسبة مئوية',
+        value: 10,
+        minOrder: 100,
+        usedCount: 45,
+        maxUsage: 100,
+        startDate: '2026-07-01',
+        endDate: '2026-08-31',
+        status: DiscountStatus.active),
+    Discount(
+        id: '2',
+        code: 'SUMMER20',
+        type: 'نسبة مئوية',
+        value: 20,
+        minOrder: 200,
+        usedCount: 78,
+        maxUsage: 100,
+        startDate: '2026-06-01',
+        endDate: '2026-08-31',
+        status: DiscountStatus.active),
+    Discount(
+        id: '3',
+        code: 'WELCOME50',
+        type: 'مبلغ ثابت',
+        value: 50,
+        minOrder: 300,
+        usedCount: 100,
+        maxUsage: 100,
+        startDate: '2026-01-01',
+        endDate: '2026-06-30',
+        status: DiscountStatus.expired),
+    Discount(
+        id: '4',
+        code: 'EID15',
+        type: 'نسبة مئوية',
+        value: 15,
+        minOrder: 150,
+        usedCount: 0,
+        maxUsage: 200,
+        startDate: '2026-08-10',
+        endDate: '2026-08-20',
+        status: DiscountStatus.scheduled),
   ];
 
   static final List<BannerItem> _dummyBanners = [
-    BannerItem(id: '1', title: 'تخفيضات الصيف', link: '/summer-sale', sortOrder: 1, isActive: true),
-    BannerItem(id: '2', title: 'منتجات جديدة', link: '/new-arrivals', sortOrder: 2, isActive: true),
-    BannerItem(id: '3', title: 'عرض الجمعة', link: '/friday-deals', sortOrder: 3, isActive: false),
+    BannerItem(
+        id: '1',
+        title: 'تخفيضات الصيف',
+        link: '/summer-sale',
+        sortOrder: 1,
+        isActive: true),
+    BannerItem(
+        id: '2',
+        title: 'منتجات جديدة',
+        link: '/new-arrivals',
+        sortOrder: 2,
+        isActive: true),
+    BannerItem(
+        id: '3',
+        title: 'عرض الجمعة',
+        link: '/friday-deals',
+        sortOrder: 3,
+        isActive: false),
   ];
 
   static final List<PageItem> _dummyPages = [
-    PageItem(id: '1', title: 'من نحن', content: 'متجر إلكتروني متخصص في بيع المنتجات الإلكترونية والأزياء...'),
-    PageItem(id: '2', title: 'سياسة الاسترجاع', content: 'يمكنك إرجاع المنتج خلال 14 يوم من تاريخ الاستلام...'),
-    PageItem(id: '3', title: 'الشروط والأحكام', content: 'باستخدامك للموقع فإنك توافق على الشروط التالية...'),
+    PageItem(
+        id: '1',
+        title: 'من نحن',
+        content: 'متجر إلكتروني متخصص في بيع المنتجات الإلكترونية والأزياء...'),
+    PageItem(
+        id: '2',
+        title: 'سياسة الاسترجاع',
+        content: 'يمكنك إرجاع المنتج خلال 14 يوم من تاريخ الاستلام...'),
+    PageItem(
+        id: '3',
+        title: 'الشروط والأحكام',
+        content: 'باستخدامك للموقع فإنك توافق على الشروط التالية...'),
   ];
 
   static final List<NotificationItem> _dummyNotifications = [
-    NotificationItem(id: '1', title: 'عرض خاص', body: 'خصم 20% على جميع المنتجات هذا الأسبوع!', date: '2026-07-28'),
-    NotificationItem(id: '2', title: 'منتجات جديدة', body: 'تصفح أحدث المنتجات التي وصلت المتجر', date: '2026-07-25'),
-    NotificationItem(id: '3', title: 'تذكير السلة', body: 'لديك منتجات في السلة بانتظار إتمام الطلب', date: '2026-07-20'),
+    NotificationItem(
+        id: '1',
+        title: 'عرض خاص',
+        body: 'خصم 20% على جميع المنتجات هذا الأسبوع!',
+        date: '2026-07-28'),
+    NotificationItem(
+        id: '2',
+        title: 'منتجات جديدة',
+        body: 'تصفح أحدث المنتجات التي وصلت المتجر',
+        date: '2026-07-25'),
+    NotificationItem(
+        id: '3',
+        title: 'تذكير السلة',
+        body: 'لديك منتجات في السلة بانتظار إتمام الطلب',
+        date: '2026-07-20'),
   ];
 
   static final List<FaqItem> _dummyFaqs = [
-    FaqItem(id: '1', question: 'كم تستغرق مدة التوصيل؟', answer: 'عادة ما يستغرق التوصيل من 2-5 أيام عمل حسب الموقع.'),
-    FaqItem(id: '2', question: 'هل يمكنني إرجاع المنتج؟', answer: 'نعم، يمكنك إرجاع المنتج خلال 14 يوم من الاستلام.'),
-    FaqItem(id: '3', question: 'ما هي طرق الدفع المتاحة؟', answer: 'نوفر الدفع عند الاستلام والبطاقات الائتمانية والتحويل البنكي.'),
-    FaqItem(id: '4', question: 'هل التوصيل مجاني؟', answer: 'التوصيل مجاني للطلبات التي تزيد عن 200 ر.ي.'),
+    FaqItem(
+        id: '1',
+        question: 'كم تستغرق مدة التوصيل؟',
+        answer: 'عادة ما يستغرق التوصيل من 2-5 أيام عمل حسب الموقع.'),
+    FaqItem(
+        id: '2',
+        question: 'هل يمكنني إرجاع المنتج؟',
+        answer: 'نعم، يمكنك إرجاع المنتج خلال 14 يوم من الاستلام.'),
+    FaqItem(
+        id: '3',
+        question: 'ما هي طرق الدفع المتاحة؟',
+        answer:
+            'نوفر الدفع عند الاستلام والبطاقات الائتمانية والتحويل البنكي.'),
+    FaqItem(
+        id: '4',
+        question: 'هل التوصيل مجاني؟',
+        answer: 'التوصيل مجاني للطلبات التي تزيد عن 200 ر.ي.'),
   ];
 }
 
-final adminServiceProvider = Provider<AdminService>((ref) => AdminService(ref.watch(apiClientProvider)));
+final adminServiceProvider =
+    Provider<AdminService>((ref) => AdminService(ref.watch(apiClientProvider)));
 
-final adminProductServiceProvider =
-    Provider<AdminProductService>((ref) => AdminProductService(ref.watch(apiClientProvider)));
+final adminProductServiceProvider = Provider<AdminProductService>(
+    (ref) => AdminProductService(ref.watch(apiClientProvider)));
 
 // ============================================
 // إدارة المنتجات (Admin Products) — State & Provider
@@ -1837,8 +2091,7 @@ class AdminProductsNotifier extends StateNotifier<AdminProductsState> {
   }
 
   /// تعديل منتج — يعيد null عند النجاح أو رسالة الخطأ
-  Future<String?> updateProduct(
-      String id, Map<String, dynamic> data) async {
+  Future<String?> updateProduct(String id, Map<String, dynamic> data) async {
     try {
       await _service.updateProduct(id, data);
       await load();
@@ -1881,7 +2134,8 @@ final adminProductsProvider =
 // Banners State & Provider (بانرات الصفحة الرئيسية)
 // ============================================
 
-final bannerServiceProvider = Provider<BannerService>((ref) => BannerService(ref.watch(apiClientProvider)));
+final bannerServiceProvider = Provider<BannerService>(
+    (ref) => BannerService(ref.watch(apiClientProvider)));
 
 class BannersState {
   final List<AppBanner> banners;
@@ -1933,7 +2187,8 @@ class BannersNotifier extends StateNotifier<BannersState> {
   Future<void> refresh() => fetchBanners();
 }
 
-final bannersProvider = StateNotifierProvider<BannersNotifier, BannersState>((ref) {
+final bannersProvider =
+    StateNotifierProvider<BannersNotifier, BannersState>((ref) {
   return BannersNotifier(ref.watch(bannerServiceProvider));
 });
 
@@ -1945,99 +2200,458 @@ class NotificationsState {
   final List<AppNotification> notifications;
   final int unreadCount;
   final bool isLoading;
+  final bool isRefreshing;
+  final bool isLoadingMore;
   final String? error;
+  final int page;
+  final int lastPage;
+  final DateTime? lastFetchedAt;
 
   NotificationsState({
     this.notifications = const [],
     this.unreadCount = 0,
     this.isLoading = false,
+    this.isRefreshing = false,
+    this.isLoadingMore = false,
     this.error,
+    this.page = 1,
+    this.lastPage = 1,
+    this.lastFetchedAt,
   });
+
+  /// هل توجد صفحات إضافية لم تُحمَّل بعد؟
+  bool get hasMore => page < lastPage;
+
+  bool get isEmpty => notifications.isEmpty;
 
   NotificationsState copyWith({
     List<AppNotification>? notifications,
     int? unreadCount,
     bool? isLoading,
+    bool? isRefreshing,
+    bool? isLoadingMore,
     String? error,
+    bool clearError = false,
+    int? page,
+    int? lastPage,
+    DateTime? lastFetchedAt,
   }) {
     return NotificationsState(
       notifications: notifications ?? this.notifications,
       unreadCount: unreadCount ?? this.unreadCount,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      error: clearError ? null : (error ?? this.error),
+      page: page ?? this.page,
+      lastPage: lastPage ?? this.lastPage,
+      lastFetchedAt: lastFetchedAt ?? this.lastFetchedAt,
     );
   }
 }
 
 class NotificationsNotifier extends StateNotifier<NotificationsState> {
+  NotificationsNotifier(this._apiClient) : super(NotificationsState());
+
   final ApiClient _apiClient;
 
-  NotificationsNotifier(this._apiClient) : super(NotificationsState()) {
-    fetchNotifications();
+  /// بعد هذه المدة تُعتبر القائمة قديمة وتحتاج تحديثاً
+  static const Duration staleAfter = Duration(seconds: 30);
+
+  /// تجميع عدة أحداث (إشعارات متتابعة) في طلب واحد
+  static const Duration _debounceDelay = Duration(milliseconds: 600);
+
+  Future<void>? _inFlight;
+  Timer? _debounceTimer;
+  bool _disposed = false;
+
+  /// يزداد عند كل تفريغ (تسجيل خروج / تبديل حساب) لإبطال الطلبات الجارية،
+  /// حتى لا تكتب نتيجة طلب قديم بيانات مستخدم سابق في حالة المستخدم الجديد.
+  int _generation = 0;
+
+  bool get _isStale {
+    final at = state.lastFetchedAt;
+    if (at == null) {
+      return true;
+    }
+    return DateTime.now().difference(at) > staleAfter;
   }
 
-  Future<void> fetchNotifications() async {
-    state = state.copyWith(isLoading: true, error: null);
+  /// جلب الإشعارات مرة واحدة فقط عند الحاجة
+  ///
+  /// كانت النسخة السابقة تجلب من المُنشئ ومن initState في الشاشة معاً،
+  /// فيحدث طلبان متتاليان في كل فتح للتطبيق.
+  Future<void> ensureFresh() {
+    if (state.notifications.isNotEmpty && !_isStale) {
+      return Future.value();
+    }
+    return fetchNotifications();
+  }
+
+  /// تحديث مؤجّل (debounced) لا يُظهر مؤشر تحميل — يُستخدم بعد وصول إشعار
+  Future<void> refreshQuietly() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceDelay, () {
+      if (!_disposed) {
+        unawaited(fetchNotifications(quiet: true));
+      }
+    });
+    return Future.value();
+  }
+
+  /// تحديث عند عودة التطبيق للواجهة إذا مرّ وقت كافٍ
+  Future<void> refreshIfStale() {
+    if (!_isStale) {
+      return Future.value();
+    }
+    return fetchNotifications(quiet: state.notifications.isNotEmpty);
+  }
+
+  /// جلب الإشعارات من السيرفر — طلب واحد في الوقت نفسه مهما تكرّرت الاستدعاءات
+  Future<void> fetchNotifications(
+      {bool quiet = false, bool force = false}) async {
+    final running = _inFlight;
+    if (running != null) {
+      // ننتظر الطلب الجاري بدل تكديس طلبات متطابقة على الشبكة
+      await running;
+      if (!force) {
+        return;
+      }
+    }
+
+    final future = _fetch(quiet: quiet);
+    _inFlight = future;
     try {
-      final res = await _apiClient.getNotifications();
-      state = state.copyWith(
-        notifications: res['notifications'] as List<AppNotification>,
-        unreadCount: res['unread_count'] as int,
-        isLoading: false,
+      await future;
+    } finally {
+      _inFlight = null;
+    }
+  }
+
+  Future<void> _fetch({required bool quiet}) async {
+    if (_disposed) {
+      return;
+    }
+
+    final generation = _generation;
+
+    // عند وجود بيانات مسبقة نُحدّث في الخلفية دون شاشة تحميل فارغة
+    final background = quiet && state.notifications.isNotEmpty;
+    state = state.copyWith(
+      isLoading: !background,
+      isRefreshing: background,
+      clearError: true,
+    );
+
+    try {
+      final result = await _apiClient.getNotifications(page: 1);
+      if (_disposed || generation != _generation) {
+        return;
+      }
+
+      state = NotificationsState(
+        notifications: result.notifications,
+        unreadCount: result.unreadCount,
+        page: result.page,
+        lastPage: result.lastPage,
+        lastFetchedAt: DateTime.now(),
       );
     } catch (e) {
+      if (_disposed || generation != _generation) {
+        return;
+      }
+      final message = _errorMessage(e);
       state = state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
+        isRefreshing: false,
+        error: message,
+        clearError: message == null,
       );
     }
   }
 
-  Future<void> markAsRead(String id) async {
-    try {
-      await _apiClient.markNotificationAsRead(id);
-      final updated = state.notifications.map((n) {
-        if (n.id == id) {
-          return AppNotification(
-            id: n.id,
-            title: n.title,
-            body: n.body,
-            type: n.type,
-            data: n.data,
-            readAt: DateTime.now(),
-            createdAt: n.createdAt,
-          );
-        }
-        return n;
-      }).toList();
-      final newUnread = state.unreadCount > 0 ? state.unreadCount - 1 : 0;
-      state = state.copyWith(notifications: updated, unreadCount: newUnread);
-    } catch (_) {}
+  /// رسالة خطأ عربية مفهومة (بدلاً من نص DioException للمستخدم)
+  String? _errorMessage(Object e) {
+    if (e is DioException) {
+      switch (e.type) {
+        case DioExceptionType.connectionError:
+        case DioExceptionType.connectionTimeout:
+          return 'تعذّر الاتصال بالخادم، تحقّق من الإنترنت';
+        case DioExceptionType.receiveTimeout:
+        case DioExceptionType.sendTimeout:
+          // الخادم مستضاف على Render ويستيقظ بعد خمول، فالطلب يصل لكن الرد يتأخر
+          return 'الخادم يستغرق وقتاً في الاستجابة، أعد المحاولة بعد لحظات';
+        default:
+          break;
+      }
+
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403) {
+        // الجلسة منتهية — يتولى AuthProvider إعادة التوجيه
+        return null;
+      }
+      if (status == 502 || status == 503 || status == 504) {
+        // بروكسي Render يرد بهذه الأكواد بينما الخدمة تُقلع
+        return 'الخادم قيد التشغيل الآن، أعد المحاولة بعد لحظات';
+      }
+      if (status != null && status >= 500) {
+        return 'خطأ في الخادم، حاول لاحقاً';
+      }
+
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+
+      return 'تعذّر تحميل الإشعارات';
+    }
+
+    return e.toString().replaceAll('Exception: ', '');
   }
 
-  Future<void> markAllAsRead() async {
-    try {
-      await _apiClient.markAllNotificationsAsRead();
-      final updated = state.notifications.map((n) {
-        return AppNotification(
-          id: n.id,
-          title: n.title,
-          body: n.body,
-          type: n.type,
-          data: n.data,
-          readAt: n.readAt ?? DateTime.now(),
-          createdAt: n.createdAt,
+  /// تحديث العدّاد فوراً عند وصول إشعار (قبل أي طلب شبكة)
+  void bumpUnread() {
+    if (_disposed) {
+      return;
+    }
+    state = state.copyWith(unreadCount: state.unreadCount + 1);
+  }
+
+  /// تعليم إشعار كمقروء — تحديث متفائل مع تراجع عند فشل الطلب
+  Future<void> markAsRead(String id) async {
+    final index = state.notifications.indexWhere((n) => n.id == id);
+    if (index < 0 || _disposed) {
+      return;
+    }
+
+    final original = state.notifications[index];
+    if (original.isRead) {
+      return;
+    }
+
+    final optimistic = [...state.notifications];
+    optimistic[index] = original.copyWith(readAt: DateTime.now());
+    state = state.copyWith(
+      notifications: optimistic,
+      unreadCount: state.unreadCount > 0 ? state.unreadCount - 1 : 0,
+    );
+
+    final ok = await _apiClient.markNotificationAsRead(id);
+    if (!ok && !_disposed) {
+      // فشل الطلب: نُرجع الحالة حتى لا تختفي علامة "غير مقروء" كذباً
+      final rollback = [...state.notifications];
+      final i = rollback.indexWhere((n) => n.id == id);
+      if (i >= 0) {
+        rollback[i] = original;
+        state = state.copyWith(
+          notifications: rollback,
+          unreadCount: state.unreadCount + 1,
         );
-      }).toList();
-      state = state.copyWith(notifications: updated, unreadCount: 0);
-    } catch (_) {}
+      }
+    }
+  }
+
+  /// تعليم كل الإشعارات كمقروءة — تحديث فوري مع تراجع عند الفشل
+  Future<void> markAllAsRead() async {
+    if (_disposed || state.unreadCount == 0) {
+      return;
+    }
+
+    final previous = state;
+    final now = DateTime.now();
+    state = state.copyWith(
+      notifications: previous.notifications
+          .map((n) => n.isRead ? n : n.copyWith(readAt: now))
+          .toList(),
+      unreadCount: 0,
+    );
+
+    final ok = await _apiClient.markAllNotificationsAsRead();
+    if (!ok && !_disposed) {
+      state = previous;
+    }
+  }
+
+  /// تحميل الصفحة التالية من الإشعارات (عند التمرير للأسفل)
+  Future<void> loadMore() async {
+    if (_disposed ||
+        _inFlight != null ||
+        !state.hasMore ||
+        state.isLoadingMore ||
+        state.isLoading) {
+      return;
+    }
+
+    state = state.copyWith(isLoadingMore: true, clearError: true);
+
+    final generation = _generation;
+
+    try {
+      final next = await _apiClient.getNotifications(page: state.page + 1);
+      if (_disposed || generation != _generation) {
+        return;
+      }
+
+      final existingIds = state.notifications.map((n) => n.id).toSet();
+      state = state.copyWith(
+        notifications: [
+          ...state.notifications,
+          ...next.notifications.where((n) => !existingIds.contains(n.id)),
+        ],
+        unreadCount: next.unreadCount,
+        page: next.page,
+        lastPage: next.lastPage,
+        isLoadingMore: false,
+        lastFetchedAt: DateTime.now(),
+      );
+    } catch (e) {
+      if (_disposed) {
+        return;
+      }
+      final message = _errorMessage(e);
+      state = state.copyWith(
+        isLoadingMore: false,
+        error: message,
+        clearError: message == null,
+      );
+    }
+  }
+
+  /// تفريغ الحالة عند تسجيل الخروج
+  void reset() {
+    _generation++;
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _inFlight = null;
+    if (!_disposed) {
+      state = NotificationsState();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 }
 
-final notificationsProvider = StateNotifierProvider<NotificationsNotifier, NotificationsState>((ref) {
+final notificationsProvider =
+    StateNotifierProvider<NotificationsNotifier, NotificationsState>((ref) {
   return NotificationsNotifier(ref.watch(apiClientProvider));
 });
 
+/// عدّاد الإشعارات غير المقروءة فقط
+///
+/// يستمع لتغيّر العدّاد وحده (select) فلا يُعاد بناء شريط الرئيسية
+/// عند كل تحديث لقائمة الإشعارات — وهي القائمة الأكثر تغيّراً في التطبيق.
+final unreadNotificationsCountProvider = Provider<int>((ref) {
+  return ref.watch(notificationsProvider.select((state) => state.unreadCount));
+});
+
+/// جسر بين إشعارات Firebase الفورية وحالة التطبيق
+///
+/// يربط ثلاثة مصادر: الإشعار الوارد أثناء فتح التطبيق، النقر على إشعار،
+/// وعودة التطبيق للواجهة — إضافةً إلى تغيّر حالة تسجيل الدخول.
+class NotificationsBridge {
+  NotificationsBridge(this._ref) {
+    _foregroundSub =
+        FirebaseNotificationService.foregroundMessages.listen(_onForeground);
+    _openedSub = FirebaseNotificationService.openedMessages.listen(_onOpened);
+    _lifecycle = AppLifecycleListener(onResume: _onResume);
+    _authSub = _ref.listen<AuthState>(authProvider, _onAuthChanged);
+
+    // المزامنة الأولى تُؤجَّل لما بعد الإطار الأول حتى لا نُعدّل حالة
+    // مزوّدين آخرين أثناء بناء الواجهة.
+    Future.microtask(_syncWithAuth);
+  }
+
+  final Ref _ref;
+
+  StreamSubscription<RemoteMessage>? _foregroundSub;
+  StreamSubscription<RemoteMessage>? _openedSub;
+  ProviderSubscription<AuthState>? _authSub;
+  AppLifecycleListener? _lifecycle;
+
+  /// معرّف المستخدم المسجّل حالياً (null = زائر)
+  String? _userId;
+
+  NotificationsNotifier get _notifications =>
+      _ref.read(notificationsProvider.notifier);
+
+  void _onAuthChanged(AuthState? previous, AuthState next) {
+    _syncWithAuth(next);
+  }
+
+  void _syncWithAuth([AuthState? override]) {
+    final AuthState? state = override ?? _ref.read(authProvider);
+
+    if (state == null || !state.isAuthenticated) {
+      if (_userId != null) {
+        _userId = null;
+        _notifications.reset();
+      }
+      return;
+    }
+
+    final userId = state.user?.id.toString() ?? (state.isAuthenticated ? 'authenticated' : null);
+    if (userId != null && userId == _userId) {
+      return; // نفس المستخدم (تغيّر isLoading مثلاً)
+    }
+
+    _userId = userId;
+
+    // مستخدم جديد/مختلف: نمسح قائمة السابق ثم نجلب قائمته
+    _notifications.reset();
+    unawaited(_notifications.fetchNotifications());
+
+    // وإعادة ربط توكن الجهاز بالحساب الجديد
+    unawaited(FirebaseNotificationService.syncToken(force: true));
+  }
+
+  void _onForeground(RemoteMessage message) {
+    final auth = _ref.read(authProvider);
+    if (!auth.isAuthenticated) {
+      return; // لا يوجد مستخدم مصادق — لا عدّاد لتحديثه
+    }
+    _notifications.bumpUnread();
+    unawaited(_notifications.refreshQuietly());
+  }
+
+  void _onOpened(RemoteMessage message) {
+    final auth = _ref.read(authProvider);
+    if (!auth.isAuthenticated) {
+      return;
+    }
+    unawaited(_notifications.fetchNotifications(quiet: true, force: true));
+  }
+
+  void _onResume() {
+    final auth = _ref.read(authProvider);
+    if (!auth.isAuthenticated) {
+      return;
+    }
+    unawaited(_notifications.refreshIfStale());
+    unawaited(FirebaseNotificationService.syncToken());
+  }
+
+  void dispose() {
+    _foregroundSub?.cancel();
+    _openedSub?.cancel();
+    _authSub?.close();
+    _lifecycle?.dispose();
+    _foregroundSub = null;
+    _openedSub = null;
+    _authSub = null;
+    _lifecycle = null;
+  }
+}
+
+final notificationsBridgeProvider = Provider<NotificationsBridge>((ref) {
+  final bridge = NotificationsBridge(ref);
+  ref.onDispose(bridge.dispose);
+  return bridge;
+});
 
 final adminProvider = StateNotifierProvider<AdminNotifier, AdminState>((ref) {
   return AdminNotifier(

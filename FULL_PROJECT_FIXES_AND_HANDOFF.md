@@ -152,3 +152,138 @@
 3. **تطبيق الفلاتر وحزم iOS:**
    - بمجرد عمل `git push origin main` في المجلد الرئيسي، يتم تشغيل GitHub Actions لبناء ملف `barakat_aden.ipa`.
    - يمكن تحميل الـ IPA من تبويب Artifacts في صفحة الـ Actions وتثبيته عبر Sideloadly على هواتف الآيفون بدون حساب مطور مدفوع.
+
+
+---
+
+## 5. تحديث لاحق (نوفمبر 2026): استقرار الإشعارات على Render ودورة حياة توكن FCM
+
+> هذا القسم امتداد لقسم «المشكلة الثالثة: إشعارات Firebase وربط الـ FCM Token بالسيرفر» أعلاه.
+> الإصلاحات السابقة جعلت التوكن **يُرسَل** فعلاً، لكنها لم تحل مشكلة **وصول الطلب أصلاً** إلى خدمة
+> Render أثناء إقلاعها البارد، ولا مشكلة **فصله عن الحساب** عند الخروج أو تبديل الحساب.
+
+### 5.1 السبب الجذري الأول: النوم البارد على Render (Cold Start)
+
+* خدمة Render في الخطة المجانية تُوقَف («تنام») بعد ~15 دقيقة بلا طلبات.
+* أول طلب بعد النوم ينتظر 30–60 ثانية حتى تُقلع الحاوية، وأثناء ذلك يرد **بروكسي Render** نفسُه
+  برمز `502` / `503` / `504` قبل أن يستيقظ تطبيق Laravel أصلاً.
+* كان `ApiClient` يستخدم `connectTimeout`/`receiveTimeout` قصيرين (15 ثانية) ولا يعيد المحاولة، فطلب
+  `POST /api/user/fcm-token` كان **يفشل بصمت** في الشاشة الأولى: الخادم يستقبل الاتصال فوراً (لأن
+  الـ DNS والـ proxy جاهزان) ثم يتأخر بالرد، فينتهي المهلة عند العميل ويضيع توكن الجهاز.
+* النتيجة الملاحظة: التطبيق يعمل، لكن **لا إشعارات دفع إطلاقاً** على الجهاز، ولا رسالة خطأ تُوضّح السبب.
+
+### 5.2 السبب الجذري الثاني: مسار حذف التوكن لم يكن موجوداً في السيرفر
+
+* العميل يرسل `DELETE /api/user/fcm-token` عند تسجيل الخروج، والسيرفر كان يعرّف `POST` فقط
+  ⇒ الرد **405 Method Not Allowed** والتوكن يبقى مربوطاً بالجهاز في قاعدة البيانات.
+* النتيجة: الجهاز كان يستمر في إظهار إشعارات الحساب السابق بعد الخروج، ويصل إشعار شخص إلى جهاز
+  يستخدمه شخص آخر إذا سجّل عليه حساباً جديداً.
+
+
+### 5.3 الحل — طبقة شبكة متحاياة مع Render (`lib/services/api_service.dart`)
+
+* الثوابت:
+  * `connectTimeout = 20s`
+  * `receiveTimeout = 60s` (أطول من إقلاع الحاوية، وأقصر من صبر المستخدم)
+  * `_getAttempts = 2`
+  * `_retryDelays = [2s, 5s]`
+* `_isTransient(e)` تُرجع `true` لـ: `receiveTimeout` / `sendTimeout` / `connectionError` /
+  `connectionTimeout` / أكواد `502` و `503` و `504` (أخطاء البروكسي أثناء الإقلاع فقط).
+* **إعادة المحاولة للـ GET فقط** (العملية آمنة التكرار). أما `POST` / `PATCH` / `PUT` / `DELETE` فلا
+  تُعاد تلقائياً أبداً، لأن إعادة `POST` (إنشاء طلب، خصم محفظة، رفع إثبات دفع) قد تُنشئ **سجلاً مزدوجاً**
+  وخصماً مزدوجاً للمستخدم.
+* `warmUp()`: طلب `GET` خفيف في الخلفية إلى `/api/settings` بلا `await`، يُستدعى من `main.dart`
+  **بالتوازي** مع شاشة الدخول (ولا يُعطّلها) حتى تبدأ الحاوية بالإقلاع قبل أن يضغط المستخدم «دخول».
+  لا يُنفَّذ شيء إذا كان `useDummyData == true`.
+* `sendFcmToken()`: حتى 3 محاولات، `receiveTimeout 60s` / `sendTimeout 30s`، يعيد المحاولة عند
+  الأخطاء العابرة فقط، ويُرجع `bool` ليعرف المستدعي هل يُسجّل النجاح محلياً أم لا.
+* `clearFcmToken()`: المهل 60s/30s بدل 15s/15s، ويُبتلع الخطأ (الخروج لا يجب أن يتوقف على الشبكة).
+
+### 5.4 عقد الـ API الخاص بالإشعارات (client ⇄ server)
+
+| Method | Path | Auth | Body | Server handler |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/notifications` | `auth:sanctum` | `?page=` | `NotificationController@index` |
+| `POST` | `/api/notifications/{id}/read` | `auth:sanctum` | — | `NotificationController@markAsRead` |
+| `POST` | `/api/notifications/read-all` | `auth:sanctum` | — | `NotificationController@markAllAsRead` |
+| `GET` | `/api/notifications/unread-count` | `auth:sanctum` | — | `NotificationController@unreadCount` |
+| `POST` | `/api/user/fcm-token` | `auth:sanctum` | `{fcm_token}` | `UserController@updateFcmToken` |
+| `DELETE` | `/api/user/fcm-token` | `auth:sanctum` | — | `UserController@clearFcmToken` — **أُضيف في هذه الجولة** |
+| `GET` | `/api/settings` | عام | — | `AdminController@publicSettings` (يُستخدم في `warmUp`) |
+
+* استجابة قائمة الإشعارات مُرقَّمة: `data` (العناصر) + `current_page` + `last_page` + `total` +
+  `unread_count`، والعميل يترجمها إلى `NotificationPage`.
+
+
+### 5.5 دورة حياة التوكن على الخادم
+
+1. بعد تسجيل الدخول: العميل يرسل التوكن إلى `POST /user/fcm-token`.
+2. `updateFcmToken()` **يفصل التوكن عن أي حساب آخر أولاً**:
+   `User::where('fcm_token', $token)->where('id', '!=', $user->getKey())->update(['fcm_token' => null]);`
+   ثم يربطه بالحساب الحالي. السبب: توكن FCM فريد للجهاز، فإذا خرج مستخدم سابق دون اتصال (فلم يصل طلب
+   الحذف) ثم دخل مستخدم آخر، كانت إشعارات الحساب القديم تصل إلى الجهاز الجديد — وهذا ما يُنهيه السطر أعلاه.
+3. عند تسجيل الخروج، الحماية على ثلاث طبقات:
+   * `AuthService.logout()` ينادي `FirebaseNotificationService.unregisterFromServer()` **قبل**
+     إبطال توكن المصادقة ⇒ `DELETE /user/fcm-token` (لأن السيرفر يرفضه بعد الإبطال).
+   * `AuthController@logout()` يضع `fcm_token = null` أيضاً قبل حذف `currentAccessToken()` —
+     احتياط إذا فشل طلب الحذف من العميل (نوم Render مثلاً).
+   * العميل يمسح علامات `fcm_token_synced_value` و `fcm_token_synced_at` من `SharedPreferences`
+     حتى يُرسَل التوكن للحساب التالي فور أول دخول، ولا يظنّ التطبيق أنه «مُزامَن أصلاً».
+4. عمود `fcm_token` موجود في جدول `users` (هجرة `2026_08_07_000000_add_fcm_token_to_users_table.php`،
+   `string nullable` بعد `is_blocked`) ومُدرَج في `User::$fillable`، لذا يعمل
+   `$user->update(['fcm_token' => null])` عبر Eloquent.
+
+### 5.6 دورة حياة التوكن والتهيئة على العميل (`lib/services/firebase_notification_service.dart`)
+
+* **التهيئة الآمنة السليمة في `main.dart`:**
+  * تُهيَّأ Firebase عبر `FirebaseNotificationService.initialize()` بمهلة أمان (`timeout: 4s`) قبل `runApp`.
+  * تمنع المهلة الشاشة البيضاء في حال تأخرت استجابة آبل APNs على iOS أو انقطعت الشبكة.
+  * والأهم: تسجيل `onBackgroundMessage` يتم **بعد** `Firebase.initializeApp()` حصراً، لأن استدعاءه قبل التهيئة يرمي استثناء `[core/no-app]` ويتسبب في تعطّل معالج الخلفية بصمت.
+* **قناة الإشعارات الافتراضية لأندرويد (`high_importance_channel`):**
+  * تم إنشاء القناة بـ `IMPORTANCE_HIGH` داخل `MainActivity.kt` في أندرويد لضمان ظهور الإشعارات المنبثقة (Heads-up) والصوت والاهتزاز على أجهزة سامسونج، شاومي، وأندرويد 8.0 حتى 15.
+  * تم تحديد `channel_id` صراحة في السيرفر `FcmService` لكل من FCM v1 و FCM Legacy.
+* **جسر الإشعارات (`NotificationsBridge`):**
+  * فحص وصول الإشعارات أصبح يعتمد على `auth.isAuthenticated` بدلاً من انتظار اكتمال تحميل `state.user` كاملاً من الخادم، مما يمنع سقوط الإشعارات الواردة فور فتح التطبيق.
+* `FirebaseMessaging.instance.getToken()` مع إعادة محاولة متدرجة (`_maxTokenAttempts = 4`).
+* لا يُرسَل التوكن للسيرفر إلا إذا **تغيّر** أو مضى **12 ساعة** (`_resyncInterval`) — يوفّر طلباً
+  وكتابةً في قاعدة البيانات عند كل فتح للتطبيق.
+* `onTokenRefresh` ⇒ تحديث فوري (`force: true`) وتجاهل شرط الـ 12 ساعة.
+* `syncToken(force: true)` يُستدعى عند تغيّر هوية المستخدم من `NotificationsBridge`، فلا يبقى الجهاز
+  مربوطاً بحساب قديم.
+* `initialize()` آمن للاستدعاء المتكرر (`_initFuture`) ولا يحجب الإقلاع.
+
+
+### 5.7 حالة الإشعارات في الواجهة (`lib/providers/app_providers.dart`)
+
+* `NotificationsState`: `notifications`, `unreadCount`, `isLoading`, `isRefreshing`, `isLoadingMore`,
+  `error`, `page`, `lastPage`, `lastFetchedAt`، و `hasMore => page < lastPage`.
+* `NotificationsNotifier`:
+  * `_inFlight` يمنع تكديس طلبات القائمة نفسها (أكثر من استدعاء متزامن يعيد نفس الـ Future).
+  * `_generation` يمنع نتيجة طلب قديم من الكتابة فوق حالة مستخدم جديد (سباق بعد تسجيل الخروج).
+  * `staleAfter = 30s` مع `ensureFresh()` / `refreshQuietly()` / `refreshIfStale()`.
+  * `_fetch(quiet: true)` يُحدّث في الخلفية دون إظهار مؤشر تحميل أو تفريغ القائمة.
+  * `loadMore()` يخرج فوراً إذا كان هناك طلب جارٍ أو `!hasMore` أو `isLoading`، ويدمج الصفحة الجديدة
+    مع حجب التكرار عبر `existingIds` (منع تكرار عنصر عند تحديث الصفحة أثناء التمرير).
+  * `markAsRead()` و `markAllAsRead()`: **تحديث متفائل** ثم تراجع (rollback) كامل إذا فشل الطلب،
+    فلا تختفي علامة «غير مقروء» كذباً.
+  * `bumpUnread()`: زيادة محلية فورية عند وصول إشعار فوري، ثم تُصحَّح بالخلفية.
+  * `reset()` عند تسجيل الخروج.
+  * `_errorMessage()` يترجم أخطاء Dio إلى عربية مفهومة: `502/503/504` ⇒
+    «الخادم قيد التشغيل الآن، أعد المحاولة بعد لحظات»، ومهل الاستجابة ⇒
+    «الخادم يستغرق وقتاً في الاستجابة، أعد المحاولة بعد لحظات».
+* `unreadNotificationsCountProvider` = `notificationsProvider.select((s) => s.unreadCount)`:
+  شارة العدّاد في `home_screen.dart` تراقب **العدّاد وحده** فقط، فلا تُعاد بناء الصفحة مع كل تحديث
+  لقائمة الإشعارات (وهي الأكثر تغيّراً).
+
+### 5.8 شاشة الإشعارات (`lib/screens/notifications_screen.dart`)
+
+* سحب للتحديث (`RefreshIndicator`) + تمرير لا نهائي (مستمع التمرير قرب النهاية ينادي `loadMore()`).
+* **ذيل القائمة:** `showFooter = state.hasMore || state.isLoadingMore`؛ أثناء `isLoadingMore` يظهر
+  دائري تحميل صغير (22×22)، وإلا يظهر زرّ صريح **«تحميل المزيد»**. السبب: القوائم القصيرة لا تُولّد
+  حدث تمرير أبداً، فبدون زر تبقى الصفحة الثانية غير قابلة للوصول؛ وعند `hasMore == false` لا يظهر
+  الذيل إطلاقاً (لا زر ولا مؤشر) حتى لا تبدو القائمة مقطوعة.
+* فواصل مجموعات زمنية: اليوم / أمس / أقدم (من `notification.dateGroup`).
+* شريط خطأ داخلي فوق القائمة عند فشل تحديث لاحق، فتبقى العناصر القديمة معروضة (لا شاشة فشل كاملة).
+* حالات فارغة/خطأ منفصلة: `Icons.notifications_off_outlined` («لا توجد إشعارات حالياً») و
+  `Icons.cloud_off_rounded` مع زر «إعادة المحاولة» يستدعي `fetchNotifications(force: true)`.
+

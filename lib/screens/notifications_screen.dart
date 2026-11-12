@@ -1,7 +1,9 @@
 // ============================================
 // شاشة الإشعارات (Notifications Screen)
-// متجاوبة وتفاعلية بالكامل
+// تحميل تدريجي + سحب للتحديث + تجميع حسب التاريخ
 // ============================================
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,23 +16,54 @@ class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
-    // جلب الإشعارات المحدثة فور فتح الشاشة
-    Future.microtask(() {
-      ref.read(notificationsProvider.notifier).fetchNotifications();
+    _scrollController.addListener(_onScroll);
+
+    // جلب واحد فقط بعد بناء الشاشة.
+    // ensureFresh يتجاهل الطلب إذا كانت البيانات حديثة، فلا يتكرّر الطلب
+    // عند كل تنقّل بين الشاشات (بينما كان fetchNotifications يجلب دائماً).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      unawaited(ref.read(notificationsProvider.notifier).ensureFresh());
     });
   }
 
   @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// تحميل الصفحة التالية عند الاقتراب من نهاية القائمة
+  void _onScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 320) {
+      unawaited(ref.read(notificationsProvider.notifier).loadMore());
+    }
+  }
+
+  NotificationsNotifier get _notifier =>
+      ref.read(notificationsProvider.notifier);
+
+  @override
   Widget build(BuildContext context) {
-    final notificationsState = ref.watch(notificationsProvider);
-    final notifier = ref.read(notificationsProvider.notifier);
+    final state = ref.watch(notificationsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -40,362 +73,454 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'تحديث',
-            onPressed: () => notifier.fetchNotifications(),
+            onPressed: state.isLoading
+                ? null
+                : () => _notifier.fetchNotifications(
+                      quiet: true,
+                      force: true,
+                    ),
           ),
-          if (notificationsState.unreadCount > 0)
-            TextButton(
-              onPressed: () => notifier.markAllAsRead(),
-              child: Text(
-                'تعليم الكل كمقروء',
-                style: TextStyle(fontSize: 12, color: AppColors.primary),
-              ),
+          if (state.unreadCount > 0)
+            IconButton(
+              icon: const Icon(Icons.done_all_rounded),
+              tooltip: 'تعليم الكل كمقروء',
+              onPressed: () => _notifier.markAllAsRead(),
             ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => notifier.fetchNotifications(),
-        child: notificationsState.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : notificationsState.notifications.isEmpty
-                ? _buildEmptyState(context, notifier)
-                : _buildNotificationsList(context, ref, notificationsState.notifications),
+        onRefresh: () => _notifier.fetchNotifications(quiet: true, force: true),
+        child: _buildBody(state),
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, NotificationsNotifier notifier) {
-    return ListView(
+  Widget _buildBody(NotificationsState state) {
+    if (state.isLoading && state.notifications.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.notifications.isEmpty) {
+      if (state.error != null) {
+        return _buildMessageView(
+          icon: Icons.cloud_off_rounded,
+          title: 'تعذّر تحميل الإشعارات',
+          message: state.error!,
+          actionLabel: 'إعادة المحاولة',
+          onAction: () => _notifier.fetchNotifications(force: true),
+        );
+      }
+
+      return _buildMessageView(
+        icon: Icons.notifications_off_outlined,
+        title: 'لا توجد إشعارات حالياً',
+        message: 'ستظهر هنا إشعارات تأكيد طلباتك ومسار شحنها فور صدورها',
+      );
+    }
+
+    final entries = _buildEntries(state);
+
+    // مؤشر التحميل يظهر فقط عند وجود صفحات أخرى — لا نُطيل القائمة بلا داعٍ
+    final showFooter = state.hasMore || state.isLoadingMore;
+
+    return ListView.builder(
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.notifications_off_outlined,
-                size: 80,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'لا توجد إشعارات حالياً',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimaryLight,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  'ستظهر هنا إشعارات تأكيد طلباتك ومسار شحنها فور صدورها',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondaryLight,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => notifier.fetchNotifications(),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('تحديث الآن'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      itemCount: entries.length + (showFooter ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index < entries.length) {
+          return entries[index];
+        }
+        return _buildFooter(state);
+      },
+    );
+  }
+
+  /// ذيل القائمة: مؤشر أثناء الجلب، وزر صريح إن تعذّر التمرير (قائمة قصيرة)
+  Widget _buildFooter(NotificationsState state) {
+    if (!state.isLoadingMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: TextButton(
+            onPressed: () => _notifier.loadMore(),
+            child: const Text('تحميل المزيد'),
           ),
         ),
+      );
+    }
+
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      ),
+    );
+  }
+
+  /// عناصر القائمة مع فواصل مجموعات التاريخ (اليوم / أمس / أقدم)
+  List<Widget> _buildEntries(NotificationsState state) {
+    final entries = <Widget>[];
+
+    if (state.error != null) {
+      entries.add(_buildErrorBanner(state.error!));
+    }
+
+    String? currentGroup;
+
+    for (final notification in state.notifications) {
+      final group = notification.dateGroup;
+      if (group != currentGroup) {
+        currentGroup = group;
+        entries.add(_buildGroupHeader(group));
+      }
+      entries.add(_buildCard(notification));
+    }
+
+    return entries;
+  }
+
+  Widget _buildGroupHeader(String label) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(top: 8, bottom: 10, start: 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(height: 1, color: AppColors.borderLight),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageView({
+    required IconData icon,
+    required String title,
+    required String message,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    // ListView حتى يبقى السحب للتحديث متاحاً في الحالة الفارغة أيضاً
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      children: [
+        SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
+        Icon(icon, size: 80, color: Colors.grey.shade400),
+        const SizedBox(height: 16),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimaryLight,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.4,
+            color: AppColors.textSecondaryLight,
+          ),
+        ),
+        if (actionLabel != null && onAction != null) ...[
+          const SizedBox(height: 20),
+          Center(
+            child: FilledButton.tonal(
+              onPressed: onAction,
+              child: Text(actionLabel),
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildNotificationsList(
-      BuildContext context, WidgetRef ref, List<AppNotification> notifications) {
-    // تجميع الإشعارات حسب التواريخ (اليوم / أمس / أقدم)
-    final Map<String, List<AppNotification>> grouped = {};
-    for (var notification in notifications) {
-      final group = notification.dateGroup;
-      grouped.putIfAbsent(group, () => []).add(notification);
-    }
-
-    final groupsOrder = ['اليوم', 'أمس', 'أقدم'];
-
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: groupsOrder.where((g) => grouped.containsKey(g)).length,
-      itemBuilder: (context, index) {
-        final groupKey = groupsOrder.where((g) => grouped.containsKey(g)).elementAt(index);
-        final groupItems = grouped[groupKey]!;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 8, right: 4),
-              child: Text(
-                groupKey,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textSecondaryLight,
-                ),
-              ),
+  /// شريط خطأ يظهر أعلى القائمة دون إخفاء البيانات المحمّلة مسبقاً
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 18,
+            color: AppColors.error,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 12, color: AppColors.error),
             ),
-            ...groupItems.map((item) => _NotificationTile(notification: item)),
-          ],
-        );
-      },
+          ),
+          TextButton(
+            onPressed: () =>
+                _notifier.fetchNotifications(quiet: true, force: true),
+            child: const Text(
+              'إعادة المحاولة',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
 
-class _NotificationTile extends ConsumerWidget {
-  final AppNotification notification;
+  Widget _buildCard(AppNotification notification) {
+    final unread = notification.isUnread;
 
-  const _NotificationTile({required this.notification});
-
-  void _showDetailsSheet(BuildContext context, AppNotification notif) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: unread
+            ? notification.color.withValues(alpha: 0.06)
+            : AppColors.cardLight,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _handleTap(notification),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: unread
+                    ? notification.color.withValues(alpha: 0.35)
+                    : AppColors.borderLight,
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // أيقونة ملونة حسب نوع الإشعار
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: notif.color.withValues(alpha: 0.15),
+                    color: notification.color.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(notif.icon, color: notif.color, size: 28),
+                  child: Icon(
+                    notification.icon,
+                    color: notification.color,
+                    size: 24,
+                  ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notification.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight:
+                                    unread ? FontWeight.bold : FontWeight.w600,
+                                color: AppColors.textPrimaryLight,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            notification.timeFormatted,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        notif.title,
+                        notification.body,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.35,
+                          color: unread
+                              ? AppColors.textPrimaryLight
+                                  .withValues(alpha: 0.85)
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (unread)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsetsDirectional.only(
+                      start: 8,
+                      top: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: notification.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// النقر على إشعار: تعليمه كمقروء ثم الانتقال إلى وجهته
+  Future<void> _handleTap(AppNotification notification) async {
+    // تحديث متفائل: تختفي نقطة "غير مقروء" فوراً،
+    // ويعود الحال تلقائياً إذا رفض السيرفر الطلب.
+    if (notification.isUnread) {
+      unawaited(_notifier.markAsRead(notification.id));
+    }
+
+    final route = notification.route;
+
+    // الوجهة هي نفس الشاشة (إشعار إداري بلا رابط) — نعرض التفاصيل بدل التكرار
+    if (!route.startsWith('/') || route == '/notifications') {
+      _showDetailsSheet(notification);
+      return;
+    }
+
+    // صفحة تفاصيل الطلب تحتاج كائن Order كاملاً (extra)،
+    // فنجلبه أولاً ثم ننتقل — وعند الفشل نفتح قائمة الطلبات.
+    if (route.startsWith('/order-details')) {
+      final orderId = notification.orderId;
+      if (orderId == null || orderId.isEmpty) {
+        return;
+      }
+
+      try {
+        final order = await ref.read(orderServiceProvider).getOrder(orderId);
+        if (!mounted) {
+          return;
+        }
+        context.push('/order-details/$orderId', extra: order);
+      } catch (_) {
+        if (!mounted) {
+          return;
+        }
+        context.push('/orders');
+      }
+      return;
+    }
+
+    context.push(route);
+  }
+
+  void _showDetailsSheet(AppNotification notification) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: notification.color.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        notification.icon,
+                        color: notification.color,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        notification.title,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimaryLight,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notif.timeFormatted,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 32),
-            Text(
-              notif.body,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.6,
-                color: AppColors.textPrimaryLight,
-              ),
-            ),
-            const SizedBox(height: 28),
-            Row(
-              children: [
-                if (notif.data?['order_id'] != null)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        context.push('/orders');
-                      },
-                      icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                      label: const Text('عرض تفاصيل الطلب'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (notif.data?['order_id'] != null) const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('إغلاق'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(notificationsProvider.notifier);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: notification.isRead ? 0 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: notification.isRead ? Colors.grey.shade200 : notification.color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      color: notification.isRead ? AppColors.cardLight : notification.color.withValues(alpha: 0.04),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () async {
-          if (!notification.isRead) {
-            notifier.markAsRead(notification.id);
-          }
-
-          final data = notification.data;
-          final orderId = data?['order_id']?.toString();
-
-          if (orderId != null && orderId.isNotEmpty) {
-            try {
-              final order = await ref.read(orderServiceProvider).getOrder(orderId);
-              if (context.mounted) {
-                context.push('/order-details/$orderId', extra: order);
-                return;
-              }
-            } catch (_) {
-              if (context.mounted) {
-                context.push('/orders');
-                return;
-              }
-            }
-          }
-
-          if (context.mounted) {
-            _showDetailsSheet(context, notification);
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // أيقونة ملونة حسَب النوع
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: notification.color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  notification.icon,
-                  color: notification.color,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // المحتوى النصي
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.bold,
-                              color: AppColors.textPrimaryLight,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          notification.timeFormatted,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondaryLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.body,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: notification.isRead
-                            ? AppColors.textSecondaryLight
-                            : AppColors.textPrimaryLight.withValues(alpha: 0.85),
-                        height: 1.3,
-                      ),
                     ),
                   ],
                 ),
-              ),
-              if (!notification.isRead) ...[
-                const SizedBox(width: 8),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: notification.color,
-                    shape: BoxShape.circle,
+                const SizedBox(height: 14),
+                Text(
+                  notification.body,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: AppColors.textPrimaryLight,
                   ),
                 ),
+                const SizedBox(height: 10),
+                Text(
+                  '${notification.dateGroup} · ${notification.timeFormatted}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondaryLight,
+                  ),
+                ),
+                if (notification.orderId != null) ...[
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        // تفاصيل الطلب تُبنى من قائمة الطلبات (تحتاج كائن Order)
+                        context.push('/orders');
+                      },
+                      icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                      label: const Text('عرض الطلبات'),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
