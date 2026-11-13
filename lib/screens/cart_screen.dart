@@ -641,8 +641,9 @@ $itemsList
         );
 
     if (order != null && mounted) {
-      // تحديث قائمة الإشعارات فورياً لإظهار إشعار استلام الطلب
+      // تحديث قائمة الإشعارات والطلبات فورياً لإظهار الطلب الجديد والإشعار
       ref.read(notificationsProvider.notifier).fetchNotifications();
+      ref.read(ordersProvider.notifier).loadOrders();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -651,7 +652,7 @@ $itemsList
               const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('🎉 تم استلام طلبك رقم #${order.orderNumber} بنجاح! تم إرسال إشعار بتفاصيله.'),
+                child: Text('🎉 تم ارسال طلبك بنجاح رقم #${order.orderNumber}'),
               ),
             ],
           ),
@@ -670,7 +671,18 @@ $itemsList
       if (!mounted) return;
       context.pushReplacement('/order-success', extra: order);
     } else {
-      if (mounted) setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        final errorMsg = ref.read(ordersProvider).error ?? 'فشل إرسال الطلب، يرجى المحاولة مرة أخرى';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 

@@ -42,12 +42,21 @@ class AuthController extends BaseApiController
 
     public function login(Request $request): JsonResponse
     {
+        // يقبل البريد الإلكتروني أو رقم الهاتف في حقل email أو phone
+        $loginField = $request->input('email') ?? $request->input('phone') ?? $request->input('login');
+
         $request->validate([
-            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        if (blank($loginField)) {
+            return $this->error('يرجى إدخال البريد الإلكتروني أو رقم الهاتف', 422);
+        }
+
+        // البحث بالبريد الإلكتروني أولاً، ثم رقم الهاتف
+        $user = filter_var($loginField, FILTER_VALIDATE_EMAIL)
+            ? User::where('email', $loginField)->first()
+            : User::where('phone', $loginField)->orWhere('email', $loginField)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -234,6 +243,11 @@ class AuthController extends BaseApiController
 
     public function logout(Request $request): JsonResponse
     {
+        // فصل جهاز الإشعارات قبل إبطال التوكن: لو فشل طلب الحذف من التطبيق
+        // (نوم الخدمة على Render مثلاً) فلا يبقى الجهاز يستقبل إشعارات
+        // هذا الحساب بعد أن يسجّل عليه شخص آخر.
+        $request->user()->update(['fcm_token' => null]);
+
         $request->user()->currentAccessToken()->delete();
 
         return $this->success(null, 'تم تسجيل الخروج بنجاح');

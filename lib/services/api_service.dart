@@ -764,16 +764,27 @@ class OrderService {
       );
     }
 
+    final addressId = int.tryParse(address.id);
     final response = await _apiClient.post('/orders', data: {
       'items': items
           .map((e) => {
-                'product_id': int.parse(e.product.id),
+                'product_id': int.tryParse(e.product.id) ?? e.product.id,
                 'quantity': e.quantity,
                 if (e.selectedColor.isNotEmpty) 'color': e.selectedColor,
                 if (e.selectedSize.isNotEmpty) 'size': e.selectedSize,
               })
           .toList(),
-      'address_id': int.parse(address.id),
+      if (addressId != null) 'address_id': addressId,
+      'address': {
+        'governorate': address.governorate,
+        'city': address.city,
+        'district': address.district,
+        'street': address.street,
+        'phone': address.phone,
+        'latitude': address.latitude,
+        'longitude': address.longitude,
+        'is_gps_location': address.isGpsLocation,
+      },
       'payment_method': paymentMethod,
       'order_type': type,
     });

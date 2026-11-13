@@ -4,9 +4,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        private const val TAG = "FCM_NATIVE"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
@@ -26,6 +31,7 @@ class MainActivity : FlutterActivity() {
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
+            Log.d(TAG, "NotificationChannel created successfully: $channelId")
         }
     }
 }

@@ -101,6 +101,7 @@ class FcmService
                             'android' => [
                                 'priority' => 'HIGH',
                                 'notification' => [
+                                    'channel_id' => 'high_importance_channel',
                                     'sound' => 'default',
                                     'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                                 ],
@@ -140,6 +141,7 @@ class FcmService
                         'title' => $title,
                         'body' => $body,
                         'sound' => 'default',
+                        'android_channel_id' => 'high_importance_channel',
                         'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                     ],
                     'data' => array_merge($stringData, [

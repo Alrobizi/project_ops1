@@ -33,7 +33,7 @@ void setFcmApiClient(ApiClient client) {
 /// سجل تشخيصي لا يُنفَّذ في نسخة الإصدار
 void _log(String message) {
   if (kDebugMode) {
-    debugPrint(message);
+    debugPrint('[FCM] $message');
   }
 }
 
@@ -42,8 +42,11 @@ void _log(String message) {
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // لا نُهيّئ Firebase هنا: الإشعار من نوع notification يعرضه النظام تلقائياً،
   // وتهيئة Firebase داخل الـ isolate الخلفي مكلفة وتُبطئ معالجة الرسائل.
-  _log('📩 إشعار في الخلفية: ${message.notification?.title}');
+  _log('📩 إشعار في الخلفية (Background): ${message.notification?.title}');
   _log('📄 الرسالة: ${message.notification?.body}');
+  if (message.data.isNotEmpty) {
+    _log('📦 بيانات الإشعار: ${message.data}');
+  }
 }
 
 class FirebaseNotificationService {
@@ -321,6 +324,7 @@ class FirebaseNotificationService {
   }) async {
     final client = fcmApiClient;
     if (client == null) {
+      _log('⚠️ لا يوجد ApiClient بعد — تأجيل إرسال توكن FCM للسيرفر Render');
       return false;
     }
 
@@ -331,16 +335,21 @@ class FirebaseNotificationService {
     final recentlySynced = syncedAt > 0 && age < _resyncInterval.inMilliseconds;
 
     if (!force && recentlySynced && syncedToken == token) {
+      _log('ℹ️ تم مزامنة توكن FCM مسبقاً مع سيرفر Render');
       return true;
     }
 
+    _log('🌐 جاري إرسال توكن FCM إلى سيرفر Render (${ApiClient.baseUrl}/user/fcm-token)...');
     final ok = await client.sendFcmToken(token);
     if (ok) {
+      _log('✅ تم تسجيل توكن FCM بنجاح في قاعدة بيانات Render!');
       await prefs.setString(_prefSyncedToken, token);
       await prefs.setInt(
         _prefSyncedAt,
         DateTime.now().millisecondsSinceEpoch,
       );
+    } else {
+      _log('⚠️ لم يتم حفظ توكن FCM في Render (تحقق من تسجيل دخول المستخدم)');
     }
 
     return ok;
@@ -448,7 +457,10 @@ class FirebaseNotificationService {
 
   /// إشعار وصل والتطبيق مفتوح
   static void _handleForegroundMessage(RemoteMessage message) {
-    _log('📬 إشعار وارد (التطبيق مفتوح): ${message.notification?.title}');
+    _log('📬 إشعار وارد (Foreground): ${message.notification?.title} | ${message.notification?.body}');
+    if (message.data.isNotEmpty) {
+      _log('📦 بيانات الإشعار الوارد: ${message.data}');
+    }
 
     // بثّ الحدث للواجهة لتحديث العدّاد والقائمة بدون طلب شبكة
     if (!_foregroundController.isClosed) {
@@ -463,6 +475,11 @@ class FirebaseNotificationService {
     final key = _messageKey(message);
     if (key != null && !_handledOpenedKeys.add(key)) {
       return; // عُولجت مسبقاً
+    }
+
+    _log('👆 تم النقر على الإشعار من شريط التنبيهات: ${message.notification?.title}');
+    if (message.data.isNotEmpty) {
+      _log('📦 بيانات الإشعار المنقور: ${message.data}');
     }
 
     if (!_openedController.isClosed) {
@@ -483,6 +500,11 @@ class FirebaseNotificationService {
       final key = _messageKey(initial);
       if (key != null) {
         _handledOpenedKeys.add(key);
+      }
+
+      _log('❄️ فتح التطبيق من حالة الإغلاق عبر إشعار: ${initial.notification?.title}');
+      if (initial.data.isNotEmpty) {
+        _log('📦 بيانات إشعار الإقلاع: ${initial.data}');
       }
 
       if (!_openedController.isClosed) {

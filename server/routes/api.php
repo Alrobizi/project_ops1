@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [UserController::class, 'show']);
     Route::put('/user', [UserController::class, 'update']);
     Route::post('/user/fcm-token', [UserController::class, 'updateFcmToken']);
+    Route::delete('/user/fcm-token', [UserController::class, 'clearFcmToken']);
 
     // مسارات المدفوعات والـ Webhook للمحاكي
     Route::post('/payments/initiate', [PaymentWebhookController::class, 'initiatePayment']);

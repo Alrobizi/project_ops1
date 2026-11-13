@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -44,8 +45,26 @@ class UserController extends BaseApiController
             'fcm_token' => ['required', 'string', 'max:500'],
         ]);
 
+        // توكن FCM فريد للجهاز، فلا يجوز أن يبقى مربوطاً بحسابين.
+        // يفصل التوكن عن أي حساب آخر (مثلاً خرج المستخدم السابق دون اتصال،
+        // فلم يصل طلب الحذف إلى الخادم) قبل ربطه بالحساب الحالي، وإلا وصلت
+        // إشعارات الحساب القديم إلى من يستخدم الجهاز الآن.
+        User::where('fcm_token', $validated['fcm_token'])
+            ->where('id', '!=', $request->user()->getKey())
+            ->update(['fcm_token' => null]);
+
         $request->user()->update(['fcm_token' => $validated['fcm_token']]);
 
         return $this->success(null, 'تم تسجيل توكن الإشعارات بنجاح');
+    }
+
+    /**
+     * فصل جهاز المستخدم الحالي عن إشعاراته (عند تسجيل الخروج)
+     */
+    public function clearFcmToken(Request $request): JsonResponse
+    {
+        $request->user()->update(['fcm_token' => null]);
+
+        return $this->success(null, 'تم إلغاء تسجيل جهاز الإشعارات');
     }
 }

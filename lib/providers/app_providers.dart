@@ -527,7 +527,23 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
       state = state.copyWith(orders: [order, ...state.orders]);
       return order;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      String msg = 'فشل إرسال الطلب، يرجى المحاولة مجدداً';
+      if (e is DioException) {
+        final res = e.response?.data;
+        if (res is Map) {
+          if (res['message'] != null) {
+            msg = res['message'].toString();
+          } else if (res['error'] != null) {
+            msg = res['error'].toString();
+          } else if (res['errors'] != null && res['errors'] is Map) {
+            final firstVal = (res['errors'] as Map).values.first;
+            msg = firstVal is List ? firstVal.first.toString() : firstVal.toString();
+          }
+        }
+      } else {
+        msg = e.toString().replaceAll('Exception: ', '');
+      }
+      state = state.copyWith(error: msg);
       return null;
     }
   }
