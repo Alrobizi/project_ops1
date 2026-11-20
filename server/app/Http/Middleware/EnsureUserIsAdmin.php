@@ -23,7 +23,13 @@ class EnsureUserIsAdmin
             ], 403);
         }
 
-        // التحقق الإلزامي من مفتاح الترخيص (X-Admin-License)
+        // السماح للوحة التحكم داخل تطبيق Flutter بالعمل بدون ترخيص (مع بقاء التحقق من صلاحيات الأدمن)
+        // بينما تبقى لوحة التحكم على الويب (/admin) مقفلة إلزامياً بالترخيص
+        if ($request->header('X-Client-Platform') === 'flutter_app') {
+            return $next($request);
+        }
+
+        // التحقق الإلزامي من مفتاح الترخيص (X-Admin-License) للوحة الويب
         $licenseKey = strtoupper(trim((string) (
             $request->header('X-Admin-License')
             ?? $request->query('admin_license')

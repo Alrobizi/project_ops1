@@ -13,6 +13,14 @@ import 'screens/profile_screen.dart';
 import 'screens/addresses_screen.dart';
 import 'screens/support_pages_screen.dart';
 import 'providers/app_providers.dart';
+import 'screens/admin/dashboard_screen.dart';
+import 'screens/admin/marketing_screen.dart';
+import 'screens/admin/customers_screen.dart';
+import 'screens/admin/reports_screen.dart';
+import 'screens/admin/discounts_screen.dart';
+import 'screens/admin/content_screen.dart';
+import 'screens/admin/settings_screen.dart';
+import 'screens/admin/products_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/payment_waiting_screen.dart';
 import 'screens/theme_color_screen.dart';
@@ -147,12 +155,39 @@ class AppRouter {
       ),
 
       // ============================================
-      // تم إلغاء لوحة التحكم من داخل التطبيق بالكامل
-      // (الإدارة متاحة حصراً من لوحة الويب /admin بالترخيص)
+      // شاشات لوحة التحكم (Admin Dashboard)
       // ============================================
       GoRoute(
-        path: '/admin/:any(.*)',
-        redirect: (context, state) => '/home',
+        path: '/admin/dashboard',
+        builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/admin/marketing',
+        builder: (context, state) => const MarketingScreen(),
+      ),
+      GoRoute(
+        path: '/admin/customers',
+        builder: (context, state) => const CustomersScreen(),
+      ),
+      GoRoute(
+        path: '/admin/reports',
+        builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/discounts',
+        builder: (context, state) => const DiscountsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/content',
+        builder: (context, state) => const ContentScreen(),
+      ),
+      GoRoute(
+        path: '/admin/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/products',
+        builder: (context, state) => const AdminProductsScreen(),
       ),
 
       // شاشة اختيار لون التطبيق

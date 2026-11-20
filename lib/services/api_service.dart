@@ -84,6 +84,7 @@ class ApiClient {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'X-Client-Platform': 'flutter_app',
       },
     ));
 
