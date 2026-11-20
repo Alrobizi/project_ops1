@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminLicenseController;
 use App\Http\Controllers\Api\AdminProductController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BannerController;
@@ -69,9 +70,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/addresses/{address}/default', [AddressController::class, 'setDefault']);
 
     // ============================================
-    // مسارات لوحة التحكم (Admin Routes)
+    // التحقق من ترخيص لوحة التحكم (يُستدعى قبل الدخول للوحة)
+    // ============================================
+    Route::post('/admin/license/verify', [AdminLicenseController::class, 'verify']);
+
+    // ============================================
+    // مسارات لوحة التحكم (Admin Routes — محمية بالترخيص الإلزامي)
     // ============================================
     Route::middleware('admin')->group(function () {
+
+    // إدارة تراخيص لوحة التحكم من داخل اللوحة نفسها
+    Route::get('/admin/licenses', [AdminLicenseController::class, 'index']);
+    Route::post('/admin/licenses', [AdminLicenseController::class, 'store']);
+    Route::patch('/admin/licenses/{id}/toggle', [AdminLicenseController::class, 'toggle']);
+    Route::delete('/admin/licenses/{id}', [AdminLicenseController::class, 'destroy']);
 
     // لوحة التحكم - الإحصائيات وإدارة الطلبات (متاحة لأي أدمن)
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);

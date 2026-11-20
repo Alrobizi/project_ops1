@@ -237,13 +237,22 @@
         if (token) localStorage.setItem('barakat_admin_token', token);
         else localStorage.removeItem('barakat_admin_token');
       },
+      getLicense() {
+        return localStorage.getItem('barakat_admin_license') || '';
+      },
+      setLicense(key) {
+        if (key) localStorage.setItem('barakat_admin_license', key.trim().toUpperCase());
+        else localStorage.removeItem('barakat_admin_license');
+      },
       async request(endpoint, options = {}, attempt = 1) {
         const baseUrl = this.getBaseUrl();
         const token = this.getToken();
+        const license = this.getLicense();
         const headers = {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(license ? { 'X-Admin-License': license } : {}),
           ...(options.headers || {})
         };
         const controller = new AbortController();
@@ -258,6 +267,9 @@
           clearTimeout(timeoutId);
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
+            if (res.status === 403 && data && data.code === 'LICENSE_REQUIRED') {
+              window.dispatchEvent(new CustomEvent('barakat-license-locked', { detail: data.message || 'تم إيقاف أو انتهاء الترخيص' }));
+            }
             const err = new Error(data.message || `خطأ ${res.status}: فشل الاستجابة`);
             err.status = res.status;
             err.data = data;
@@ -297,6 +309,37 @@
           }
         }
         return res;
+      },
+      async verifyLicense(licenseKey) {
+        const cleanKey = (licenseKey || this.getLicense() || '').trim().toUpperCase();
+        const res = await this.request('/admin/license/verify', {
+          method: 'POST',
+          headers: { 'X-Admin-License': cleanKey },
+          body: JSON.stringify({ license_key: cleanKey })
+        });
+        if (res.success) {
+          this.setLicense(cleanKey);
+        }
+        return res;
+      },
+      async getLicenses() {
+        return this.request('/admin/licenses');
+      },
+      async createLicense(payload) {
+        return this.request('/admin/licenses', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      },
+      async toggleLicense(id) {
+        return this.request(`/admin/licenses/${id}/toggle`, {
+          method: 'PATCH'
+        });
+      },
+      async deleteLicense(id) {
+        return this.request(`/admin/licenses/${id}`, {
+          method: 'DELETE'
+        });
       },
       async getDashboard() {
         return this.request('/admin/dashboard');
@@ -2079,6 +2122,318 @@
     };
 
     // ==========================================
+    // =========================================================================
+    // ADMIN LOCK & LICENSE GATE SCREEN (بوابة تأمين لوحة التحكم بالترخيص)
+    // =========================================================================
+    const AdminLockScreen = ({ onUnlocked, initialError }) => {
+      const [email, setEmail] = useState("");
+      const [password, setPassword] = useState("");
+      const [licenseKey, setLicenseKey] = useState(BarakatApi.getLicense() || "");
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(initialError || "");
+
+      useEffect(() => {
+        if (initialError) setError(initialError);
+      }, [initialError]);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        const cleanKey = licenseKey.trim().toUpperCase();
+        if (!cleanKey) {
+          setError("الرجاء إدخال مفتاح الترخيص للدخول");
+          return;
+        }
+        setLoading(true);
+        try {
+          let user = null;
+          if (email.trim() && password) {
+            const loginRes = await BarakatApi.login(email.trim(), password);
+            user = loginRes?.data?.user || null;
+          } else if (!BarakatApi.getToken()) {
+            throw new Error("الرجاء إدخال البريد الإلكتروني وكلمة المرور ومفتاح الترخيص");
+          }
+          const licRes = await BarakatApi.verifyLicense(cleanKey);
+          onUnlocked(user, licRes?.data || null);
+        } catch (err) {
+          setError(err.message || "فشل التحقق من بيانات الدخول أو الترخيص");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4" dir="rtl">
+          <div className="w-full max-w-md bg-white dark:bg-[#131B2E] rounded-3xl shadow-2xl border border-slate-200/20 overflow-hidden">
+            <div className="bg-gradient-to-l from-indigo-600 to-brand-600 p-6 text-white text-center">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <Icon name="ShieldCheck" size={34} />
+              </div>
+              <h1 className="text-xl font-black">لوحة تحكم بركة عدن — محمية بالترخيص</h1>
+              <p className="text-xs text-white/80 mt-1">لا يُسمح بالدخول إلا بحساب إداري + مفتاح ترخيص صالح</p>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {error && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
+                  <Icon name="AlertTriangle" size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">البريد الإلكتروني للإدارة</label>
+                <input
+                  type="email"
+                  required={!BarakatApi.getToken()}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@store.com"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">كلمة المرور</label>
+                <input
+                  type="password"
+                  required={!BarakatApi.getToken()}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">مفتاح الترخيص (License Key) 🔐</label>
+                <input
+                  type="text"
+                  required
+                  dir="ltr"
+                  value={licenseKey}
+                  onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
+                  placeholder="BRK-XXXX-XXXX-XXXX"
+                  className="w-full px-4 py-3 rounded-xl bg-amber-50/70 dark:bg-slate-800 border-2 border-amber-300 dark:border-amber-600/60 text-sm font-mono font-bold tracking-wider text-center outline-none focus:border-brand-500"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-l from-indigo-600 to-brand-600 hover:opacity-95 text-white font-bold text-sm shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? "جاري التحقق من الترخيص..." : "فتح لوحة التحكم 🔓"}
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    // =========================================================================
+    // LICENSES MANAGEMENT VIEW (إدارة التراخيص من داخل لوحة التحكم نفسها)
+    // =========================================================================
+    const LicensesView = ({ showToast }) => {
+      const [licenses, setLicenses] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [label, setLabel] = useState("");
+      const [customKey, setCustomKey] = useState("");
+      const [expiresAt, setExpiresAt] = useState("");
+      const [creating, setCreating] = useState(false);
+
+      const loadLicenses = async () => {
+        setLoading(true);
+        try {
+          const res = await BarakatApi.getLicenses();
+          setLicenses(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+          showToast(err.message || "تعذر تحميل التراخيص", "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        loadLicenses();
+      }, []);
+
+      const handleCreate = async (e) => {
+        e.preventDefault();
+        if (!label.trim()) return;
+        setCreating(true);
+        try {
+          const payload = { label: label.trim() };
+          if (customKey.trim()) payload.license_key = customKey.trim().toUpperCase();
+          if (expiresAt) payload.expires_at = expiresAt;
+          const res = await BarakatApi.createLicense(payload);
+          showToast("تم إصدار الترخيص الجديد بنجاح 🔐");
+          setLabel("");
+          setCustomKey("");
+          setExpiresAt("");
+          await loadLicenses();
+          if (res?.data?.license_key && navigator.clipboard) {
+            navigator.clipboard.writeText(res.data.license_key).catch(() => {});
+          }
+        } catch (err) {
+          showToast(err.message || "تعذر إصدار الترخيص", "error");
+        } finally {
+          setCreating(false);
+        }
+      };
+
+      const handleToggle = async (lic) => {
+        try {
+          await BarakatApi.toggleLicense(lic.id);
+          showToast(lic.is_active ? "تم إيقاف الترخيص فوراً 🚫" : "تم تفعيل الترخيص ✅");
+          await loadLicenses();
+        } catch (err) {
+          showToast(err.message || "تعذر تحديث حالة الترخيص", "error");
+        }
+      };
+
+      const handleDelete = async (lic) => {
+        if (!confirm(`هل أنت متأكد من حذف الترخيص "${lic.label}"؟`)) return;
+        try {
+          await BarakatApi.deleteLicense(lic.id);
+          showToast("تم حذف الترخيص بنجاح");
+          await loadLicenses();
+        } catch (err) {
+          showToast(err.message || "تعذر حذف الترخيص", "error");
+        }
+      };
+
+      const copyKey = (key) => {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(key);
+          showToast("تم نسخ مفتاح الترخيص 📋");
+        }
+      };
+
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-white dark:bg-[#131B2E] p-6 rounded-2xl border border-slate-100 dark:border-[#1F293D] shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">
+                <Icon name="ShieldCheck" size={22} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-slate-800 dark:text-white">إصدار ترخيص دخول جديد</h2>
+                <p className="text-xs text-slate-500">لا يمكن لأي مشرف دخول لوحة التحكم إلا بمفتاح ترخيص نشط صادر من هنا</p>
+              </div>
+            </div>
+            <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <input
+                type="text"
+                required
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="اسم صاحب الترخيص (مثلاً: مدير المبيعات)"
+                className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm outline-none focus:border-brand-500"
+              />
+              <input
+                type="text"
+                dir="ltr"
+                value={customKey}
+                onChange={(e) => setCustomKey(e.target.value.toUpperCase())}
+                placeholder="مفتاح مخصص (اتركه فارغاً للتوليد التلقائي)"
+                className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-mono outline-none focus:border-brand-500"
+              />
+              <input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm outline-none focus:border-brand-500"
+                title="تاريخ الانتهاء (اختياري)"
+              />
+              <button
+                type="submit"
+                disabled={creating}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition disabled:opacity-50"
+              >
+                {creating ? "جاري الإصدار..." : "+ إصدار ترخيص"}
+              </button>
+            </form>
+          </div>
+
+          <div className="bg-white dark:bg-[#131B2E] rounded-2xl border border-slate-100 dark:border-[#1F293D] shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100 dark:border-[#1F293D] flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 dark:text-white">التراخيص الصادرة ({licenses.length})</h3>
+              <button onClick={loadLicenses} className="text-xs font-bold text-indigo-600 hover:underline">تحديث القائمة</button>
+            </div>
+            {loading ? (
+              <div className="p-8 text-center text-sm text-slate-400">جاري تحميل التراخيص...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-500">
+                    <tr>
+                      <th className="p-4">الاسم / الوصف</th>
+                      <th className="p-4">مفتاح الترخيص</th>
+                      <th className="p-4">الحالة</th>
+                      <th className="p-4">تاريخ الانتهاء</th>
+                      <th className="p-4">آخر استخدام</th>
+                      <th className="p-4">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {licenses.map((lic) => (
+                      <tr key={lic.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                        <td className="p-4 font-bold text-slate-800 dark:text-slate-100">
+                          {lic.label}
+                          {lic.is_master && (
+                            <span className="mr-2 px-2 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-700 font-bold">رئيسي</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <code className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono text-xs font-bold" dir="ltr">{lic.license_key}</code>
+                            <button onClick={() => copyKey(lic.license_key)} className="text-xs text-indigo-600 hover:underline">نسخ</button>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            !lic.is_active ? "bg-rose-100 text-rose-700" :
+                            lic.is_expired ? "bg-amber-100 text-amber-700" :
+                            "bg-emerald-100 text-emerald-700"
+                          }`}>
+                            {!lic.is_active ? "موقوف" : lic.is_expired ? "منتهي" : "نشط ✓"}
+                          </span>
+                        </td>
+                        <td className="p-4 text-xs text-slate-500">
+                          {lic.expires_at ? new Date(lic.expires_at).toLocaleDateString('ar-YE') : "دائم"}
+                        </td>
+                        <td className="p-4 text-xs text-slate-500">
+                          {lic.last_used_at ? `${new Date(lic.last_used_at).toLocaleString('ar-YE')} (${lic.last_used_ip || '-'})` : "لم يُستخدم بعد"}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggle(lic)}
+                              className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                                lic.is_active
+                                  ? "bg-rose-50 text-rose-600 hover:bg-rose-100"
+                                  : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                              }`}
+                            >
+                              {lic.is_active ? "إيقاف" : "تفعيل"}
+                            </button>
+                            {!lic.is_master && (
+                              <button
+                                onClick={() => handleDelete(lic)}
+                                className="px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-600"
+                              >
+                                حذف
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
     // 3. STORE SETTINGS VIEW (الإعدادات العامة والربط)
     // ==========================================
     const SettingsView = ({ settings, setSettings, isLiveMode, connectionStatus, showToast }) => {
@@ -2758,33 +3113,40 @@
         }
       };
 
-      // Auto-connect on initial mount (بدون تسجيل دخول تلقائي على السيرفر الحقيقي)
+      // حالة قفل لوحة التحكم بالترخيص الإلزامي
+      const [licenseVerified, setLicenseVerified] = useState(false);
+      const [licenseChecking, setLicenseChecking] = useState(true);
+      const [licenseLockReason, setLicenseLockReason] = useState("");
+
+      useEffect(() => {
+        const onLocked = (e) => {
+          BarakatApi.setLicense("");
+          setLicenseVerified(false);
+          setLicenseLockReason(e.detail || "تم إيقاف أو انتهاء صلاحية الترخيص");
+        };
+        window.addEventListener('barakat-license-locked', onLocked);
+        return () => window.removeEventListener('barakat-license-locked', onLocked);
+      }, []);
+
+      // التحقق الإلزامي من التوكن + الترخيص عند فتح لوحة التحكم (بدون دخول تجريبي)
       useEffect(() => {
         const initApi = async () => {
+          setLicenseChecking(true);
           const token = BarakatApi.getToken();
-          if (token) {
-            await fetchLiveDashboardAndOrders(false);
-            return;
-          }
-
-          // محليًا فقط: محاولة تسجيل دخول تلقائي بحساب التطوير الافتراضي
-          const isLocalDev = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(window.location.hostname);
-          if (isLocalDev) {
+          const savedLicense = BarakatApi.getLicense();
+          if (token && savedLicense) {
             try {
-              await BarakatApi.login("admin@store.test", "password");
-              try {
-                setAdminUser(JSON.parse(localStorage.getItem("barakat_admin_user") || "null"));
-              } catch (e) { /* تجاهل */ }
+              await BarakatApi.verifyLicense(savedLicense);
+              setLicenseVerified(true);
+              setLicenseChecking(false);
               await fetchLiveDashboardAndOrders(false);
               return;
             } catch (err) {
-              console.log("Auto-login fallback to demo mode:", err.message);
+              setLicenseLockReason(err.message || "الترخيص غير صالح أو منتهي");
             }
           }
-
-          // على السيرفر الحقيقي: نطلب بيانات الدخول بدل الدخول التلقائي (ثغرة أمنية)
-          setConnectionStatus("demo");
-          setApiModalOpen(true);
+          setLicenseVerified(false);
+          setLicenseChecking(false);
         };
         initApi();
       }, []);
@@ -2895,6 +3257,7 @@
         { id: "products", label: "المنتجات", icon: "Package", badge: String(stats.total_products || 17) },
         { id: "categories", label: "التصنيفات", icon: "Grid" },
         { id: "settings", label: "الإعدادات", icon: "Settings" },
+        { id: "licenses", label: "التراخيص والأمان", icon: "ShieldCheck" },
         { id: "users", label: "المستخدمون", icon: "Users", badge: String(stats.total_customers || 2) },
       ];
 
@@ -2908,6 +3271,32 @@
           return matchSearch && matchStatus;
         });
       }, [orders, searchQuery, statusFilter]);
+
+      if (licenseChecking) {
+        return (
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white" dir="rtl">
+            <div className="text-center space-y-3">
+              <div className="w-12 h-12 mx-auto border-4 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-sm font-bold">جاري التحقق من ترخيص لوحة التحكم...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (!licenseVerified) {
+        return (
+          <AdminLockScreen
+            initialError={licenseLockReason}
+            onUnlocked={async (user) => {
+              if (user) setAdminUser(user);
+              setLicenseLockReason("");
+              setLicenseVerified(true);
+              await fetchLiveDashboardAndOrders(false);
+              showToast("تم التحقق من الترخيص وفتح لوحة التحكم بنجاح 🔓");
+            }}
+          />
+        );
+      }
 
       return (
         <div className="min-h-screen bg-[#F6F7FB] dark:bg-[#0B0F19] transition-colors duration-300 flex">
@@ -3617,6 +4006,11 @@
                   connectionStatus={connectionStatus}
                   showToast={showToast}
                 />
+              )}
+
+              {/* LICENSES & SECURITY VIEW */}
+              {activeNav === "licenses" && (
+                <LicensesView showToast={showToast} />
               )}
 
               {/* ORDERS FULL VIEW */}

@@ -46,6 +46,7 @@ class ApiClient {
   /// بعض الخدمات (مثل إشعارات FCM) تُنشئ نسخة خاصة قبل تسجيل الدخول،
   /// ولو كان الحقل خاصاً بكل نسخة لبقي التوكن مفقوداً فيها.
   static String? _token;
+  static String? _adminLicense;
 
   // ============================================
   // إعدادات الشبكة — مضبوطة على استضافة Render
@@ -86,11 +87,14 @@ class ApiClient {
       },
     ));
 
-    // Interceptor لإرفاق التوكن في كل طلب
+    // Interceptor لإرفاق التوكن ومفتاح ترخيص لوحة التحكم في كل طلب
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         if (_token != null) {
           options.headers['Authorization'] = 'Bearer $_token';
+        }
+        if (_adminLicense != null && _adminLicense!.isNotEmpty) {
+          options.headers['X-Admin-License'] = _adminLicense;
         }
         return handler.next(options);
       },
@@ -110,7 +114,56 @@ class ApiClient {
     FirebaseNotificationService.syncToken();
   }
 
-  void clearToken() => _token = null;
+  void clearToken() {
+    _token = null;
+    _adminLicense = null;
+  }
+
+  void setAdminLicense(String? key) {
+    _adminLicense = key?.trim().toUpperCase();
+  }
+
+  String? get adminLicense => _adminLicense;
+
+  /// التحقق من مفتاح ترخيص لوحة التحكم
+  Future<Map<String, dynamic>> verifyAdminLicense(String licenseKey) async {
+    final clean = licenseKey.trim().toUpperCase();
+    final response = await _dio.post(
+      '/admin/license/verify',
+      data: {'license_key': clean},
+      options: Options(headers: {'X-Admin-License': clean}),
+    );
+    _adminLicense = clean;
+    return Map<String, dynamic>.from(response.data['data'] ?? {});
+  }
+
+  Future<List<Map<String, dynamic>>> getAdminLicenses() async {
+    final response = await get('/admin/licenses');
+    final list = response.data['data'] as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Future<Map<String, dynamic>> createAdminLicense({
+    required String label,
+    String? licenseKey,
+    String? expiresAt,
+  }) async {
+    final response = await post('/admin/licenses', data: {
+      'label': label,
+      if (licenseKey != null && licenseKey.trim().isNotEmpty)
+        'license_key': licenseKey.trim().toUpperCase(),
+      if (expiresAt != null && expiresAt.isNotEmpty) 'expires_at': expiresAt,
+    });
+    return Map<String, dynamic>.from(response.data['data'] ?? {});
+  }
+
+  Future<void> toggleAdminLicense(int id) async {
+    await patch('/admin/licenses/$id/toggle');
+  }
+
+  Future<void> deleteAdminLicense(int id) async {
+    await delete('/admin/licenses/$id');
+  }
 
   /// التوكن الحالي (يُستخدم عند استعادة بيانات المستخدم بعد إعادة التشغيل)
   String? get token => _token;
