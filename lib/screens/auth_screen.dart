@@ -679,7 +679,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // بيانات تجريبية
+                /*
+                // بيانات تجريبية (تم تعليقها)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -707,6 +708,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ],
                   ),
                 ),
+                */
               ],
             ),
           ),
