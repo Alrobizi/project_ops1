@@ -421,6 +421,89 @@ class ApiClient {
       'action': action,
     });
   }
+
+  /// التحقق من كود الخصم (Coupon)
+  Future<Map<String, dynamic>> validateCoupon({
+    required String code,
+    required double subtotal,
+  }) async {
+    final response = await post('/coupons/validate', data: {
+      'code': code.trim(),
+      'subtotal': subtotal,
+    });
+    return Map<String, dynamic>.from(response.data['data']);
+  }
+
+  /// جلب تقييمات ومراجعات منتج
+  Future<Map<String, dynamic>> getProductReviews(String productId) async {
+    final response = await get('/products/$productId/reviews');
+    return Map<String, dynamic>.from(response.data['data']);
+  }
+
+  /// إضافة أو تحديث تقييم لمنتج
+  Future<ProductReview> submitProductReview({
+    required String productId,
+    required int rating,
+    String comment = '',
+    String sizeFit = 'true_to_size',
+  }) async {
+    final response = await post('/products/$productId/reviews', data: {
+      'rating': rating,
+      'comment': comment,
+      'size_fit': sizeFit,
+    });
+    return ProductReview.fromJson(
+      Map<String, dynamic>.from(response.data['data']),
+    );
+  }
+
+  /// جلب عناوين المستخدم
+  Future<List<Address>> getAddresses() async {
+    final response = await get('/addresses');
+    final list = response.data['data'] as List? ?? [];
+    return list.map((e) => Address.fromJson(Map<String, dynamic>.from(e))).toList();
+  }
+
+  /// إضافة عنوان جديد
+  Future<Address> createAddress(Address address) async {
+    final response = await post('/addresses', data: {
+      'governorate': address.governorate,
+      'city': address.city,
+      'district': address.district,
+      'street': address.street,
+      'phone': address.phone,
+      'is_default': address.isDefault,
+      if (address.latitude != null) 'latitude': address.latitude,
+      if (address.longitude != null) 'longitude': address.longitude,
+      'is_gps_location': address.isGpsLocation,
+    });
+    return Address.fromJson(Map<String, dynamic>.from(response.data['data']));
+  }
+
+  /// حذف عنوان
+  Future<void> deleteAddress(String id) async {
+    await delete('/addresses/$id');
+  }
+
+  /// تعيين عنوان كافتراضي
+  Future<Address> setDefaultAddress(String id) async {
+    final response = await patch('/addresses/$id/default');
+    return Address.fromJson(Map<String, dynamic>.from(response.data['data']));
+  }
+
+  /// جلب الصفحات التعريفية (سياسة الخصوصية، الاسترجاع...)
+  Future<List<Map<String, dynamic>>> getPublicPages() async {
+    final response = await get('/pages');
+    final list = response.data['data'] as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  /// جلب الأسئلة الشائعة
+  Future<List<Map<String, dynamic>>> getPublicFaqs() async {
+    final response = await get('/faqs');
+    final list = response.data['data'] as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
 }
 
 /// خدمة المصادقة
@@ -729,6 +812,8 @@ class OrderService {
     required Address address,
     required String paymentMethod,
     String? orderType,
+    String? couponCode,
+    String? notes,
   }) async {
     final type = orderType ??
         (paymentMethod.contains('أم فلوس')
@@ -761,6 +846,8 @@ class OrderService {
         status: OrderStatus.pending,
         address: address,
         paymentMethod: paymentMethod,
+        couponCode: couponCode,
+        notes: notes,
       );
     }
 
@@ -787,7 +874,37 @@ class OrderService {
       },
       'payment_method': paymentMethod,
       'order_type': type,
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'coupon_code': couponCode.trim(),
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
     });
+    return Order.fromJson(response.data['data']);
+  }
+
+  /// إلغاء طلب في حالة قيد المراجعة
+  Future<Order> cancelOrder(String orderId) async {
+    if (ApiClient.useDummyData) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      final o = DummyData.orders.firstWhere((e) => e.id == orderId);
+      return Order(
+        id: o.id,
+        orderNumber: o.orderNumber,
+        orderType: o.orderType,
+        date: o.date,
+        items: o.items,
+        subtotal: o.subtotal,
+        discountAmount: o.discountAmount,
+        couponCode: o.couponCode,
+        shipping: o.shipping,
+        total: o.total,
+        status: OrderStatus.cancelled,
+        address: o.address,
+        paymentMethod: o.paymentMethod,
+        notes: o.notes,
+      );
+    }
+
+    final response = await _apiClient.post('/orders/$orderId/cancel');
     return Order.fromJson(response.data['data']);
   }
 }

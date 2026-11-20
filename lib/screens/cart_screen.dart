@@ -132,10 +132,22 @@ class CartScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
+                // حقل كود الخصم (Coupon)
+                const _CouponInputBar(),
+                const SizedBox(height: 12),
                 _SummaryRow(
                   label: 'المجموع الفرعي',
                   value: '${cart.subtotal.toStringAsFixed(0)} ${cart.currencySymbol}',
                 ),
+                if (cart.discountAmount > 0) ...[
+                  const SizedBox(height: 8),
+                  _SummaryRow(
+                    label: 'الخصم (${cart.couponCode ?? ''})',
+                    value:
+                        '-${cart.discountAmount.toStringAsFixed(0)} ${cart.currencySymbol}',
+                    valueColor: AppColors.success,
+                  ),
+                ],
                 const SizedBox(height: 8),
                 _SummaryRow(
                   label: 'الشحن',
@@ -271,6 +283,167 @@ class _CartItemCard extends StatelessWidget {
   }
 }
 
+/// شريط إدخال وتطبيق كود الخصم (Coupon) في السلة
+class _CouponInputBar extends ConsumerStatefulWidget {
+  const _CouponInputBar();
+
+  @override
+  ConsumerState<_CouponInputBar> createState() => _CouponInputBarState();
+}
+
+class _CouponInputBarState extends ConsumerState<_CouponInputBar> {
+  final TextEditingController _controller = TextEditingController();
+  bool _isApplying = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _apply() async {
+    final code = _controller.text.trim();
+    if (code.isEmpty) return;
+
+    setState(() => _isApplying = true);
+    try {
+      final subtotal = ref.read(cartProvider).subtotal;
+      final res = await ref.read(apiClientProvider).validateCoupon(
+            code: code,
+            subtotal: subtotal,
+          );
+      final amount =
+          double.tryParse(res['discount_amount']?.toString() ?? '0') ?? 0.0;
+      final validCode = res['code']?.toString() ?? code;
+
+      ref.read(cartProvider.notifier).applyCoupon(
+            code: validCode,
+            discountAmount: amount,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تطبيق كود الخصم ($validCode) بنجاح 🎉'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      String msg = 'كود الخصم غير صالح أو منتهي الصلاحية';
+      final str = e.toString();
+      if (str.contains('الحد الأدنى') ||
+          str.contains('انتهت') ||
+          str.contains('غير مفعّل') ||
+          str.contains('الحد الأقصى')) {
+        msg = str.replaceAll('Exception: ', '');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isApplying = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cart = ref.watch(cartProvider);
+
+    if (cart.couponCode != null && cart.discountAmount > 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.local_offer, color: AppColors.success, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'تم تفعيل الكوبون: ${cart.couponCode}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.success,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18, color: AppColors.error),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                ref.read(cartProvider.notifier).removeCoupon();
+                _controller.clear();
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _apply(),
+            decoration: InputDecoration(
+              hintText: 'لديك كود خصم؟ أدخله هنا',
+              prefixIcon: const Icon(Icons.local_offer_outlined, size: 20),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.borderLight),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 44,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: _isApplying ? null : _apply,
+            child: _isApplying
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'تطبيق',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SummaryRow extends StatelessWidget {
   final String label;
   final String value;
@@ -328,6 +501,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   // [تعديل]: جعل وسيلة الدفع الافتراضية هي "إرسال حوالة مباشرة" لكون المحافظ الرقمية ستتوفر قريباً
   String _paymentMethod = 'إرسال حوالة مباشرة';
   bool _isProcessing = false;
+  final TextEditingController _notesController = TextEditingController();
 
   final List<Map<String, dynamic>> _paymentOptions = [
     {
@@ -638,6 +812,10 @@ $itemsList
           address: _selectedAddress!,
           paymentMethod: _paymentMethod,
           orderType: orderType,
+          couponCode: cart.couponCode,
+          notes: _notesController.text.trim().isNotEmpty
+              ? _notesController.text.trim()
+              : null,
         );
 
     if (order != null && mounted) {
@@ -1113,6 +1291,33 @@ $itemsList
             ],
 
             const SizedBox(height: 16),
+            // ملاحظات الطلب والتوصيل (اختياري)
+            const Text(
+              'ملاحظات الطلب والتوصيل (اختياري)',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _notesController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'مثال: يرجى الاتصال قبل الوصول أو ترك الطلب عند الاستقبال...',
+                filled: true,
+                fillColor: AppColors.cardLight,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.borderLight),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.borderLight),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             // ملخص الطلب
             const Text(
               'ملخص الطلب',
@@ -1140,6 +1345,15 @@ $itemsList
                     value:
                         '${cart.subtotal.toStringAsFixed(0)} ${cart.currencySymbol}',
                   ),
+                  if (cart.discountAmount > 0) ...[
+                    const SizedBox(height: 8),
+                    _SummaryRow(
+                      label: 'كود الخصم (${cart.couponCode ?? ''})',
+                      value:
+                          '-${cart.discountAmount.toStringAsFixed(0)} ${cart.currencySymbol}',
+                      valueColor: AppColors.success,
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   _SummaryRow(
                     label: 'الشحن',
@@ -1529,7 +1743,7 @@ class _OrderCard extends StatelessWidget {
 // ============================================
 // شاشة تفاصيل الطلب (Order Details Screen)
 // ============================================
-class OrderDetailsScreen extends StatelessWidget {
+class OrderDetailsScreen extends ConsumerWidget {
   final Order order;
 
   const OrderDetailsScreen({
@@ -1538,7 +1752,7 @@ class OrderDetailsScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         title: Text('طلب ${order.orderNumber}'),
@@ -1743,6 +1957,15 @@ class OrderDetailsScreen extends StatelessWidget {
                     label: 'المجموع الفرعي',
                     value: '${order.subtotal.toStringAsFixed(0)} ${order.currencySymbol}',
                   ),
+                  if (order.discountAmount > 0) ...[
+                    const SizedBox(height: 8),
+                    _SummaryRow(
+                      label: 'كود الخصم (${order.couponCode ?? ''})',
+                      value:
+                          '-${order.discountAmount.toStringAsFixed(0)} ${order.currencySymbol}',
+                      valueColor: AppColors.success,
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   _SummaryRow(
                     label: 'الشحن',
@@ -1759,15 +1982,115 @@ class OrderDetailsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.cardLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ملاحظات الطلب:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      order.notes!,
+                      style: const TextStyle(
+                        color: AppColors.textSecondaryLight,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
-            // زر إعادة الطلب
+            // زر إعادة الطلب (Reorder)
             CustomButton(
-              text: 'إعادة الطلب',
+              text: 'إعادة الطلب 🛒',
               isOutlined: true,
               onPressed: () {
-                // TODO: إعادة الطلب
+                ref.read(cartProvider.notifier).addOrderItems(order.items);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('تمت إضافة منتجات الطلب إلى السلة'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+                context.push('/cart');
               },
             ),
+            // زر إلغاء الطلب (متاح فقط عند حالة قيد المراجعة)
+            if (order.status == OrderStatus.pending) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text(
+                    'إلغاء الطلب',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('إلغاء الطلب'),
+                        content: const Text(
+                          'هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('تراجع'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text(
+                              'نعم، إلغاء',
+                              style: TextStyle(color: AppColors.error),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm != true || !context.mounted) return;
+
+                    final ok = await ref
+                        .read(ordersProvider.notifier)
+                        .cancelOrder(order.id);
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          ok
+                              ? 'تم إلغاء الطلب بنجاح'
+                              : (ref.read(ordersProvider).error ??
+                                  'تعذر إلغاء الطلب'),
+                        ),
+                        backgroundColor:
+                            ok ? AppColors.success : AppColors.error,
+                      ),
+                    );
+                    if (ok) context.pop();
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -4,6 +4,7 @@
 // ============================================
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -297,6 +298,8 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
 class CartState {
   final List<CartItem> items;
   final double subtotal;
+  final double discountAmount;
+  final String? couponCode;
   final double shipping;
   final double total;
   final int itemsCount;
@@ -304,6 +307,8 @@ class CartState {
   CartState({
     this.items = const [],
     this.subtotal = 0,
+    this.discountAmount = 0,
+    this.couponCode,
     this.shipping = 0,
     this.total = 0,
     this.itemsCount = 0,
@@ -319,6 +324,9 @@ class CartState {
   CartState copyWith({
     List<CartItem>? items,
     double? subtotal,
+    double? discountAmount,
+    String? couponCode,
+    bool clearCoupon = false,
     double? shipping,
     double? total,
     int? itemsCount,
@@ -326,6 +334,9 @@ class CartState {
       CartState(
         items: items ?? this.items,
         subtotal: subtotal ?? this.subtotal,
+        discountAmount:
+            clearCoupon ? 0 : (discountAmount ?? this.discountAmount),
+        couponCode: clearCoupon ? null : (couponCode ?? this.couponCode),
         shipping: shipping ?? this.shipping,
         total: total ?? this.total,
         itemsCount: itemsCount ?? this.itemsCount,
@@ -333,10 +344,40 @@ class CartState {
 }
 
 class CartNotifier extends StateNotifier<CartState> {
-  CartNotifier() : super(CartState());
+  CartNotifier() : super(CartState()) {
+    _loadSavedCart();
+  }
 
+  static const String _cartStorageKey = 'saved_cart_items_v1';
   static const double freeShippingThreshold = 200;
   static const double shippingCost = 25;
+
+  Future<void> _loadSavedCart() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cartStorageKey);
+      if (raw == null || raw.isEmpty) return;
+      final decoded = jsonDecode(raw) as List;
+      final restored = decoded
+          .map((e) => CartItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      if (restored.isNotEmpty) {
+        _updateCart(restored, persist: false);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistCart(List<CartItem> items) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (items.isEmpty) {
+        await prefs.remove(_cartStorageKey);
+      } else {
+        final encoded = jsonEncode(items.map((e) => e.toJson()).toList());
+        await prefs.setString(_cartStorageKey, encoded);
+      }
+    } catch (_) {}
+  }
 
   void addItem(Product product,
       {int quantity = 1, String color = '', String size = ''}) {
@@ -369,6 +410,18 @@ class CartNotifier extends StateNotifier<CartState> {
     _updateCart(newItems);
   }
 
+  /// إعادة إضافة عناصر طلب سابق إلى السلة بضغطة واحدة (Reorder)
+  void addOrderItems(List<CartItem> orderItems) {
+    for (final item in orderItems) {
+      addItem(
+        item.product,
+        quantity: item.quantity,
+        color: item.selectedColor,
+        size: item.selectedSize,
+      );
+    }
+  }
+
   void removeItem(String itemId) {
     final newItems = state.items.where((item) => item.id != itemId).toList();
     _updateCart(newItems);
@@ -390,24 +443,56 @@ class CartNotifier extends StateNotifier<CartState> {
     _updateCart(newItems);
   }
 
-  void clearCart() {
-    state = CartState();
+  /// تطبيق كود خصم بعد التحقق منه من السيرفر
+  void applyCoupon({required String code, required double discountAmount}) {
+    final cappedDiscount =
+        discountAmount > state.subtotal ? state.subtotal : discountAmount;
+    final total =
+        (state.subtotal - cappedDiscount + state.shipping).clamp(0.0, double.infinity);
+    state = state.copyWith(
+      couponCode: code,
+      discountAmount: cappedDiscount,
+      total: total.toDouble(),
+    );
   }
 
-  void _updateCart(List<CartItem> items) {
+  /// إزالة كود الخصم
+  void removeCoupon() {
+    final total = state.subtotal + state.shipping;
+    state = state.copyWith(
+      clearCoupon: true,
+      total: total,
+    );
+  }
+
+  void clearCart() {
+    state = CartState();
+    _persistCart(const []);
+  }
+
+  void _updateCart(List<CartItem> items, {bool persist = true}) {
     final subtotal =
         items.fold<double>(0, (sum, item) => sum + item.totalPrice);
-    final shipping = subtotal >= freeShippingThreshold ? 0.0 : shippingCost;
-    final total = subtotal + shipping;
+    final shipping =
+        items.isEmpty ? 0.0 : (subtotal >= freeShippingThreshold ? 0.0 : shippingCost);
+    final discount = items.isEmpty
+        ? 0.0
+        : state.discountAmount.clamp(0.0, subtotal).toDouble();
+    final total = (subtotal - discount + shipping).clamp(0.0, double.infinity).toDouble();
     final itemsCount = items.fold(0, (sum, item) => sum + item.quantity);
 
     state = state.copyWith(
       items: items,
       subtotal: subtotal,
+      discountAmount: discount,
+      clearCoupon: items.isEmpty,
       shipping: shipping,
       total: total,
       itemsCount: itemsCount,
     );
+    if (persist) {
+      _persistCart(items);
+    }
   }
 
   double get remainingForFreeShipping =>
@@ -444,7 +529,39 @@ class WishlistState {
 }
 
 class WishlistNotifier extends StateNotifier<WishlistState> {
-  WishlistNotifier() : super(WishlistState());
+  WishlistNotifier() : super(WishlistState()) {
+    _loadSavedWishlist();
+  }
+
+  static const String _wishlistStorageKey = 'saved_wishlist_items_v1';
+
+  Future<void> _loadSavedWishlist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_wishlistStorageKey);
+      if (raw == null || raw.isEmpty) return;
+      final decoded = jsonDecode(raw) as List;
+      final items = decoded
+          .map((e) => Product.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      final ids = items.map((p) => p.id).toSet();
+      state = state.copyWith(items: items, productIds: ids);
+    } catch (_) {}
+  }
+
+  Future<void> _persistWishlist(List<Product> items) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (items.isEmpty) {
+        await prefs.remove(_wishlistStorageKey);
+      } else {
+        await prefs.setString(
+          _wishlistStorageKey,
+          jsonEncode(items.map((p) => p.toJson()).toList()),
+        );
+      }
+    } catch (_) {}
+  }
 
   void toggleFavorite(Product product) {
     if (state.productIds.contains(product.id)) {
@@ -452,11 +569,13 @@ class WishlistNotifier extends StateNotifier<WishlistState> {
       final newItems = state.items.where((p) => p.id != product.id).toList();
       final newIds = {...state.productIds}..remove(product.id);
       state = state.copyWith(items: newItems, productIds: newIds);
+      _persistWishlist(newItems);
     } else {
       // إضافة للمفضلة
       final newItems = [...state.items, product.copyWith(isFavorite: true)];
       final newIds = {...state.productIds, product.id};
       state = state.copyWith(items: newItems, productIds: newIds);
+      _persistWishlist(newItems);
     }
   }
 
@@ -516,6 +635,8 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
     required Address address,
     required String paymentMethod,
     String? orderType,
+    String? couponCode,
+    String? notes,
   }) async {
     try {
       final order = await _orderService.createOrder(
@@ -523,6 +644,8 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
         address: address,
         paymentMethod: paymentMethod,
         orderType: orderType,
+        couponCode: couponCode,
+        notes: notes,
       );
       state = state.copyWith(orders: [order, ...state.orders]);
       return order;
@@ -548,6 +671,27 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
     }
   }
 
+  /// إلغاء طلب قيد المراجعة وتحديث القائمة مباشرة
+  Future<bool> cancelOrder(String orderId) async {
+    try {
+      final updated = await _orderService.cancelOrder(orderId);
+      final updatedList = state.orders
+          .map((o) => o.id == orderId ? updated : o)
+          .toList();
+      state = state.copyWith(orders: updatedList, error: null);
+      return true;
+    } catch (e) {
+      String msg = 'تعذر إلغاء الطلب';
+      if (e is DioException && e.response?.data is Map) {
+        msg = e.response?.data['message']?.toString() ?? msg;
+      } else {
+        msg = e.toString().replaceAll('Exception: ', '');
+      }
+      state = state.copyWith(error: msg);
+      return false;
+    }
+  }
+
   List<Order> getOrdersByStatus(OrderStatus? status) {
     if (status == null) return state.orders;
     return state.orders.where((o) => o.status == status).toList();
@@ -569,6 +713,19 @@ final ordersProvider =
 // Products State & Provider
 // ============================================
 
+/// خيارات الفرز والترتيب بنمط SHEIN
+enum ProductSortOption {
+  nearest('الأقرب لموقعك'),
+  newest('الأحدث'),
+  priceLowToHigh('السعر: من الأقل للأعلى'),
+  priceHighToLow('السعر: من الأعلى للأقل'),
+  topRated('الأعلى تقييماً'),
+  biggestDiscount('أكبر خصم');
+
+  final String label;
+  const ProductSortOption(this.label);
+}
+
 class ProductsState {
   final List<Product> products;
   final List<Category> categories;
@@ -578,6 +735,13 @@ class ProductsState {
   final String? selectedCategoryId;
   final String? selectedSubcategoryId;
   final String searchQuery;
+
+  // ----- فلتر وفرز متقدم بنمط SHEIN -----
+  final ProductSortOption sortOption;
+  final bool onlyDiscounted;
+  final bool onlyInStock;
+  final double? minPrice;
+  final double? maxPrice;
 
   // ----- فلتر الموقع الجغرافي (اليمن - عدن افتراضياً + GPS) -----
   // نقطة المرجع لفرز المنتجات حسب الأقرب (Nearest First)
@@ -596,12 +760,24 @@ class ProductsState {
     this.selectedCategoryId,
     this.selectedSubcategoryId,
     this.searchQuery = '',
+    this.sortOption = ProductSortOption.nearest,
+    this.onlyDiscounted = false,
+    this.onlyInStock = false,
+    this.minPrice,
+    this.maxPrice,
     this.useGpsLocation = false,
     this.userLatitude = AppLocationDefaults.defaultLatitude,
     this.userLongitude = AppLocationDefaults.defaultLongitude,
     this.filterGovernorate = AppLocationDefaults.defaultGovernorate,
     this.filterCity = AppLocationDefaults.defaultCity,
   });
+
+  bool get hasActiveFilters =>
+      sortOption != ProductSortOption.nearest ||
+      onlyDiscounted ||
+      onlyInStock ||
+      minPrice != null ||
+      maxPrice != null;
 
   /// التصنيفات الرئيسية فقط (بدون الأقسام الفرعية)
   List<Category> get mainCategories =>
@@ -633,8 +809,16 @@ class ProductsState {
     bool? isLoading,
     String? error,
     String? selectedCategoryId,
+    bool clearCategory = false,
     String? selectedSubcategoryId,
+    bool clearSubcategory = false,
     String? searchQuery,
+    ProductSortOption? sortOption,
+    bool? onlyDiscounted,
+    bool? onlyInStock,
+    double? minPrice,
+    double? maxPrice,
+    bool clearPriceRange = false,
     bool? useGpsLocation,
     double? userLatitude,
     double? userLongitude,
@@ -647,10 +831,18 @@ class ProductsState {
         marketingSections: marketingSections ?? this.marketingSections,
         isLoading: isLoading ?? this.isLoading,
         error: error,
-        selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
-        selectedSubcategoryId:
-            selectedSubcategoryId ?? this.selectedSubcategoryId,
+        selectedCategoryId: clearCategory
+            ? null
+            : (selectedCategoryId ?? this.selectedCategoryId),
+        selectedSubcategoryId: clearSubcategory
+            ? null
+            : (selectedSubcategoryId ?? this.selectedSubcategoryId),
         searchQuery: searchQuery ?? this.searchQuery,
+        sortOption: sortOption ?? this.sortOption,
+        onlyDiscounted: onlyDiscounted ?? this.onlyDiscounted,
+        onlyInStock: onlyInStock ?? this.onlyInStock,
+        minPrice: clearPriceRange ? null : (minPrice ?? this.minPrice),
+        maxPrice: clearPriceRange ? null : (maxPrice ?? this.maxPrice),
         useGpsLocation: useGpsLocation ?? this.useGpsLocation,
         userLatitude: userLatitude ?? this.userLatitude,
         userLongitude: userLongitude ?? this.userLongitude,
@@ -688,16 +880,49 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
   void selectCategory(String? categoryId) {
     state = state.copyWith(
       selectedCategoryId: categoryId,
-      selectedSubcategoryId: null,
+      clearCategory: categoryId == null,
+      clearSubcategory: true,
     );
   }
 
   void selectSubcategory(String? subcategoryId) {
-    state = state.copyWith(selectedSubcategoryId: subcategoryId);
+    state = state.copyWith(
+      selectedSubcategoryId: subcategoryId,
+      clearSubcategory: subcategoryId == null,
+    );
   }
 
   void search(String query) {
     state = state.copyWith(searchQuery: query);
+  }
+
+  /// تطبيق فلاتر وفرز SHEIN المتقدمة
+  void applyFilters({
+    ProductSortOption? sortOption,
+    bool? onlyDiscounted,
+    bool? onlyInStock,
+    double? minPrice,
+    double? maxPrice,
+    bool clearPriceRange = false,
+  }) {
+    state = state.copyWith(
+      sortOption: sortOption,
+      onlyDiscounted: onlyDiscounted,
+      onlyInStock: onlyInStock,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      clearPriceRange: clearPriceRange,
+    );
+  }
+
+  /// إعادة ضبط الفلاتر المتقدمة
+  void resetFilters() {
+    state = state.copyWith(
+      sortOption: ProductSortOption.nearest,
+      onlyDiscounted: false,
+      onlyInStock: false,
+      clearPriceRange: true,
+    );
   }
 
   /// الحصول على الأقسام الفرعية للتصنيف المحدد
@@ -762,30 +987,61 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     }
 
     if (state.searchQuery.isNotEmpty) {
+      final q = state.searchQuery.toLowerCase();
       result = result
           .where((p) =>
-              p.name.contains(state.searchQuery) ||
-              p.description.contains(state.searchQuery))
+              p.name.toLowerCase().contains(q) ||
+              p.description.toLowerCase().contains(q))
           .toList();
     }
 
-    // ----- فرز حسب الموقع الجغرافي (Location Filter) -----
-    // المنتجات الأقرب لموقع المشتري (GPS أو المدينة المختارة) تظهر أولاً،
-    // ثم كسر التعادل بالتقييم الأعلى.
+    // فلاتر SHEIN المتقدمة
+    if (state.onlyDiscounted) {
+      result = result.where((p) => p.discountPercent != null).toList();
+    }
+    if (state.onlyInStock) {
+      result = result.where((p) => p.stock > 0).toList();
+    }
+    if (state.minPrice != null) {
+      result = result.where((p) => p.price >= state.minPrice!).toList();
+    }
+    if (state.maxPrice != null) {
+      result = result.where((p) => p.price <= state.maxPrice!).toList();
+    }
+
+    // الفرز حسب الخيار المحدد
     final userLat = state.userLatitude;
     final userLng = state.userLongitude;
     result = [...result]..sort((a, b) {
-        final distA = LocationService.distanceKm(
-            userLat, userLng, a.sellerLatitude, a.sellerLongitude);
-        final distB = LocationService.distanceKm(
-            userLat, userLng, b.sellerLatitude, b.sellerLongitude);
-        final cmp = distA.compareTo(distB);
-        if (cmp != 0) return cmp;
-        return b.rating.compareTo(a.rating);
+        switch (state.sortOption) {
+          case ProductSortOption.priceLowToHigh:
+            return a.price.compareTo(b.price);
+          case ProductSortOption.priceHighToLow:
+            return b.price.compareTo(a.price);
+          case ProductSortOption.topRated:
+            return b.rating.compareTo(a.rating);
+          case ProductSortOption.biggestDiscount:
+            return (b.discountPercent ?? 0).compareTo(a.discountPercent ?? 0);
+          case ProductSortOption.newest:
+            return (int.tryParse(b.id) ?? 0).compareTo(int.tryParse(a.id) ?? 0);
+          case ProductSortOption.nearest:
+            final distA = LocationService.distanceKm(
+                userLat, userLng, a.sellerLatitude, a.sellerLongitude);
+            final distB = LocationService.distanceKm(
+                userLat, userLng, b.sellerLatitude, b.sellerLongitude);
+            final cmp = distA.compareTo(distB);
+            if (cmp != 0) return cmp;
+            return b.rating.compareTo(a.rating);
+        }
       });
 
     return result;
   }
+
+  List<Product> get discountedProducts =>
+      state.products.where((p) => p.discountPercent != null).toList()
+        ..sort((a, b) =>
+            (b.discountPercent ?? 0).compareTo(a.discountPercent ?? 0));
 
   List<Product> get bestSellers =>
       state.products.where((p) => p.isBestSeller).toList();

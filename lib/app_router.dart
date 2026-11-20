@@ -4,11 +4,15 @@
 // ============================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/addresses_screen.dart';
+import 'screens/support_pages_screen.dart';
+import 'providers/app_providers.dart';
 import 'screens/admin/dashboard_screen.dart';
 import 'screens/admin/marketing_screen.dart';
 import 'screens/admin/customers_screen.dart';
@@ -133,6 +137,21 @@ class AppRouter {
       GoRoute(
         path: '/edit-profile',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+
+      // شاشة إدارة العناوين
+      GoRoute(
+        path: '/addresses',
+        builder: (context, state) => const AddressesScreen(),
+      ),
+
+      // شاشة الدعم والأسئلة الشائعة وسياسة الخصوصية
+      GoRoute(
+        path: '/support',
+        builder: (context, state) {
+          final tab = (state.extra is int) ? state.extra as int : 0;
+          return SupportPagesScreen(initialTab: tab);
+        },
       ),
 
       // ============================================
@@ -274,11 +293,51 @@ class MainNavigationWrapper extends StatelessWidget {
           ),
         ),
       ),
-      // زر السلة العائم
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/cart'),
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.shopping_cart, color: Colors.white),
+      // زر السلة العائم مع عدّاد عدد المنتجات
+      floatingActionButton: Consumer(
+        builder: (context, ref, _) {
+          final itemsCount =
+              ref.watch(cartProvider.select((s) => s.itemsCount));
+          return FloatingActionButton(
+            onPressed: () => context.push('/cart'),
+            backgroundColor: AppColors.primary,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.shopping_cart, color: Colors.white),
+                if (itemsCount > 0)
+                  Positioned(
+                    top: -10,
+                    right: -10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      child: Center(
+                        child: Text(
+                          itemsCount > 99 ? '99+' : '$itemsCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

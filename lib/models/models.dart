@@ -239,6 +239,12 @@ class Product {
     }
     return 'ر.س';
   }
+
+  /// نسبة الخصم المئوية (مثلاً 25 لخصم 25%) — تعود بـ null إذا لم يكن هناك خصم
+  int? get discountPercent {
+    if (oldPrice == null || oldPrice! <= price || oldPrice! <= 0) return null;
+    return (((oldPrice! - price) / oldPrice!) * 100).round();
+  }
 }
 
 /// نموذج التصنيف
@@ -442,11 +448,14 @@ class Order {
   final DateTime date;
   final List<CartItem> items;
   final double subtotal;
+  final double discountAmount;
+  final String? couponCode;
   final double shipping;
   final double total;
   final OrderStatus status;
   final Address address;
   final String paymentMethod;
+  final String? notes;
 
   Order({
     required this.id,
@@ -455,11 +464,14 @@ class Order {
     required this.date,
     required this.items,
     required this.subtotal,
+    this.discountAmount = 0,
+    this.couponCode,
     required this.shipping,
     required this.total,
     required this.status,
     required this.address,
     required this.paymentMethod,
+    this.notes,
   });
 
   int get itemsCount => items.fold(0, (sum, item) => sum + item.quantity);
@@ -492,11 +504,15 @@ class Order {
               .toList() ??
           [],
       subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
+      discountAmount:
+          double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0.0,
+      couponCode: json['coupon_code']?.toString(),
       shipping: double.tryParse(json['shipping']?.toString() ?? '0') ?? 0.0,
       total: double.tryParse(json['total']?.toString() ?? '0') ?? 0.0,
       status: OrderStatus.fromString(json['status']?.toString() ?? 'pending'),
       address: Address.fromJson(json['address'] is Map ? Map<String, dynamic>.from(json['address']) : {}),
       paymentMethod: method.toString(),
+      notes: json['notes']?.toString(),
     );
   }
 
@@ -507,11 +523,14 @@ class Order {
         'date': date.toIso8601String(),
         'items': items.map((e) => e.toJson()).toList(),
         'subtotal': subtotal,
+        'discount_amount': discountAmount,
+        'coupon_code': couponCode,
         'shipping': shipping,
         'total': total,
         'status': status.englishName,
         'address': address.toJson(),
         'payment_method': paymentMethod,
+        'notes': notes,
       };
 }
 
@@ -621,5 +640,49 @@ class AppBanner {
         image: json['image'] ?? '',
         link: json['link'] ?? '',
         sortOrder: json['sort_order'] is num ? (json['sort_order'] as num).toInt() : 0,
+      );
+}
+
+/// نموذج تقييم ومراجعة المنتج (بنفس أسلوب SHEIN مع مؤشر ملاءمة المقاس)
+class ProductReview {
+  final String id;
+  final String userName;
+  final int rating;
+  final String comment;
+  final String sizeFit; // 'small' | 'true_to_size' | 'large'
+  final bool isVerifiedPurchase;
+  final DateTime createdAt;
+
+  ProductReview({
+    required this.id,
+    required this.userName,
+    required this.rating,
+    required this.comment,
+    this.sizeFit = 'true_to_size',
+    this.isVerifiedPurchase = false,
+    required this.createdAt,
+  });
+
+  String get sizeFitLabel {
+    switch (sizeFit) {
+      case 'small':
+        return 'أصغر من المعتاد';
+      case 'large':
+        return 'أكبر من المعتاد';
+      default:
+        return 'مناسب تماماً للمقاس';
+    }
+  }
+
+  factory ProductReview.fromJson(Map<String, dynamic> json) => ProductReview(
+        id: json['id']?.toString() ?? '',
+        userName: json['user_name']?.toString() ?? 'عميل',
+        rating: int.tryParse(json['rating']?.toString() ?? '5') ?? 5,
+        comment: json['comment']?.toString() ?? '',
+        sizeFit: json['size_fit']?.toString() ?? 'true_to_size',
+        isVerifiedPurchase: json['is_verified_purchase'] == true,
+        createdAt:
+            DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+                DateTime.now(),
       );
 }

@@ -21,19 +21,23 @@ class Order extends Model
         'user_id',
         'address_id',
         'subtotal',
+        'discount_amount',
         'shipping',
         'total',
         'status',
         'payment_method',
+        'coupon_code',
         'payment_status',
         'wallet_name',
         'payment_expires_at',
+        'notes',
     ];
 
     protected function casts(): array
     {
         return [
             'subtotal' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'shipping' => 'decimal:2',
             'total' => 'decimal:2',
             'payment_expires_at' => 'datetime',

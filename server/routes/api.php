@@ -6,10 +6,13 @@ use App\Http\Controllers\Api\AdminProductController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ContentController;
+use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentWebhookController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,8 +28,12 @@ Route::get('/categories/marketing', [CategoryController::class, 'marketing']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
 Route::get('/banners', [BannerController::class, 'index']);
 Route::get('/settings', [AdminController::class, 'publicSettings']);
+Route::get('/pages', [ContentController::class, 'pages']);
+Route::get('/faqs', [ContentController::class, 'faqs']);
+Route::post('/coupons/validate', [CouponController::class, 'validateCoupon']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -45,6 +52,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+
+    // تقييمات ومراجعات المنتجات
+    Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
 
     // مسارات سجل إشعارات العميل
     Route::get('/notifications', [NotificationController::class, 'index']);
@@ -53,6 +64,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/addresses', [AddressController::class, 'index']);
     Route::post('/addresses', [AddressController::class, 'store']);
+    Route::put('/addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
+    Route::patch('/addresses/{address}/default', [AddressController::class, 'setDefault']);
 
     // ============================================
     // مسارات لوحة التحكم (Admin Routes)

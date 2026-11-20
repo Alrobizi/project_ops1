@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,6 +14,8 @@ import '../core/theme/app_colors.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/location_filter_sheet.dart';
+import '../widgets/product_filter_sheet.dart';
+import '../widgets/product_reviews_section.dart';
 
 // ============================================
 // الشاشة الرئيسية (Home Screen)
@@ -161,6 +164,34 @@ class HomeScreen extends ConsumerWidget {
                               Icons.search,
                               color: Color(0xFF6B7280),
                             ),
+                            suffixIcon: IconButton(
+                              tooltip: 'الفرز والفلترة',
+                              onPressed: () => showProductFilterSheet(context),
+                              icon: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Icon(
+                                    Icons.tune_rounded,
+                                    color: productsState.hasActiveFilters
+                                        ? Theme.of(context).primaryColor
+                                        : const Color(0xFF6B7280),
+                                  ),
+                                  if (productsState.hasActiveFilters)
+                                    Positioned(
+                                      top: -2,
+                                      right: -2,
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFEF4444),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
@@ -193,6 +224,8 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // عروض اليوم السريعة بعدّاد تنازلي (نمط SHEIN)
+                    const FlashSaleSection(),
                     // الأقسام التسويقية
                     if (productsState.marketingSections.isNotEmpty) ...[
                       const Row(
@@ -220,7 +253,15 @@ class HomeScreen extends ConsumerWidget {
                             return MarketingSectionChip(
                               section: section,
                               onTap: () {
-                                // TODO: التنقل لصفحة القسم التسويقي
+                                final n = section.name;
+                                if (n.contains('خصم') || n.contains('عرض') || n.contains('تخفيض')) {
+                                  notifier.applyFilters(
+                                    onlyDiscounted: true,
+                                    sortOption: ProductSortOption.biggestDiscount,
+                                  );
+                                } else {
+                                  notifier.selectCategory(section.id);
+                                }
                               },
                             );
                           },
@@ -327,21 +368,38 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
                     const SizedBox(height: 24),
-                    // الأفضل مبيعاً
+                    // الأفضل مبيعاً + زر الفلتر السريع
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'الأفضل مبيعاً',
-                          style: TextStyle(
+                        Text(
+                          productsState.hasActiveFilters
+                              ? 'المنتجات (${productsState.sortOption.label})'
+                              : 'الأفضل مبيعاً',
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimaryLight,
                           ),
                         ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text('عرض الكل'),
+                        Row(
+                          children: [
+                            if (productsState.hasActiveFilters)
+                              TextButton(
+                                onPressed: () => notifier.resetFilters(),
+                                child: const Text(
+                                  'مسح الفلتر',
+                                  style: TextStyle(color: AppColors.error),
+                                ),
+                              ),
+                            TextButton(
+                              onPressed: () {
+                                notifier.selectCategory(null);
+                                notifier.resetFilters();
+                              },
+                              child: const Text('عرض الكل'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -764,17 +822,30 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                 ? product.images.length
                                 : 1,
                             itemBuilder: (context, index) {
-                              final image = product.images.isNotEmpty
-                                  ? product.images[index]
-                                  : product.image;
-                              return CachedNetworkImage(
-                                imageUrl: image,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => const Center(
-                                  child: CircularProgressIndicator(),
+                              final galleryImages = product.images.isNotEmpty
+                                  ? product.images
+                                  : [product.image];
+                              final image = galleryImages[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => FullscreenImageViewer(
+                                        images: galleryImages,
+                                        initialIndex: index,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: CachedNetworkImage(
+                                  imageUrl: image,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(Icons.error),
                                 ),
-                                errorWidget: (context, url, error) =>
-                                    const Icon(Icons.error),
                               );
                             },
                           ),
@@ -807,7 +878,22 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                   const SizedBox(width: 8),
                                   _buildIconButton(
                                     icon: Icons.share,
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      final shareText =
+                                          '${product.name}\nالسعر: ${product.price.toStringAsFixed(0)} ${product.currencySymbol}\nاكتشفه الآن في متجرنا!';
+                                      Clipboard.setData(
+                                        ClipboardData(text: shareText),
+                                      );
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'تم نسخ تفاصيل المنتج للمشاركة',
+                                          ),
+                                          backgroundColor: AppColors.success,
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
@@ -893,6 +979,27 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                   ),
                                 ),
                               ],
+                              if (product.discountPercent != null) ...[
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'وفر ${product.discountPercent}%',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -959,14 +1066,24 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                             ),
                             const SizedBox(height: 24),
                           ],
-                          // اختيار المقاس
+                          // اختيار المقاس + دليل المقاسات بنمط SHEIN
                           if (product.sizes.isNotEmpty) ...[
-                            const Text(
-                              'المقاس',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'المقاس',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => showSizeGuideSheet(context),
+                                  icon: const Icon(Icons.straighten, size: 18),
+                                  label: const Text('دليل المقاسات'),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 12),
                             Wrap(
@@ -1024,6 +1141,56 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                   ? AppColors.success
                                   : AppColors.warning,
                             ),
+                          ),
+                          // قسم تقييمات ومراجعات العملاء (نمط SHEIN)
+                          ProductReviewsSection(productId: product.id),
+                          // منتجات مشابهة قد تعجبك
+                          Builder(
+                            builder: (context) {
+                              final similar = products
+                                  .where((p) =>
+                                      p.id != product.id &&
+                                      p.categoryId == product.categoryId)
+                                  .take(8)
+                                  .toList();
+                              if (similar.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Divider(height: 32),
+                                  const Text(
+                                    'منتجات مشابهة قد تعجبك',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    height: 210,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: similar.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(width: 12),
+                                      itemBuilder: (context, idx) {
+                                        final item = similar[idx];
+                                        return SizedBox(
+                                          width: 145,
+                                          child: ProductCard(
+                                            product: item,
+                                            onTap: () => context
+                                                .push('/product/${item.id}'),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ],
                       ),

@@ -104,12 +104,12 @@ class ProfileScreen extends ConsumerWidget {
                 _MenuItem(
                   icon: Icons.location_on_outlined,
                   title: 'عناويني',
-                  onTap: () {},
+                  onTap: () => context.push('/addresses'),
                 ),
                 _MenuItem(
                   icon: Icons.favorite_outline,
                   title: 'المفضلة',
-                  onTap: () {},
+                  onTap: () => context.go('/wishlist'),
                 ),
               ],
             ),
@@ -143,14 +143,19 @@ class ProfileScreen extends ConsumerWidget {
               title: 'الدعم',
               items: [
                 _MenuItem(
+                  icon: Icons.help_outline,
+                  title: 'الأسئلة الشائعة',
+                  onTap: () => context.push('/support', extra: 0),
+                ),
+                _MenuItem(
                   icon: Icons.privacy_tip_outlined,
                   title: 'سياسة الخصوصية',
-                  onTap: () {},
+                  onTap: () => context.push('/support', extra: 1),
                 ),
                 _MenuItem(
                   icon: Icons.headset_mic_outlined,
                   title: 'تواصل معنا',
-                  onTap: () {},
+                  onTap: () => context.push('/support', extra: 0),
                 ),
               ],
             ),

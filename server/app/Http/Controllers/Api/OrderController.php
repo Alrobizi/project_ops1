@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\OrderResource;
 use App\Models\Address;
+use App\Models\Discount;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
@@ -55,6 +56,8 @@ class OrderController extends BaseApiController
             'address' => ['nullable', 'array'],
             'payment_method' => ['required', 'string', 'max:100'],
             'order_type' => ['nullable', 'string', 'max:100'],
+            'coupon_code' => ['nullable', 'string', 'max:60'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $user = $request->user();
@@ -124,15 +127,44 @@ class OrderController extends BaseApiController
 
                 $shipping = $subtotal >= 200 ? 0 : 25;
 
+                // تطبيق كود الخصم إذا تم إرساله
+                $discountAmount = 0.0;
+                $appliedCouponCode = null;
+                if (! empty($validated['coupon_code'])) {
+                    $code = strtoupper(trim($validated['coupon_code']));
+                    $discount = Discount::whereRaw('UPPER(code) = ?', [$code])
+                        ->where('status', 'active')
+                        ->first();
+
+                    if ($discount) {
+                        $today = now()->startOfDay();
+                        $validDates = (! $discount->start_date || $today->gte($discount->start_date))
+                            && (! $discount->end_date || $today->lte($discount->end_date));
+                        $validUsage = $discount->max_usage <= 0 || $discount->used_count < $discount->max_usage;
+                        $validMin = $discount->min_order <= 0 || $subtotal >= (float) $discount->min_order;
+
+                        if ($validDates && $validUsage && $validMin) {
+                            $discountAmount = CouponController::calculateDiscountAmount($discount, $subtotal);
+                            $appliedCouponCode = $discount->code;
+                            $discount->increment('used_count');
+                        }
+                    }
+                }
+
+                $finalTotal = max(0, ($subtotal - $discountAmount) + $shipping);
+
                 $order = Order::create([
                     'order_number' => Order::generateOrderNumber(),
                     'user_id' => $user->id,
                     'address_id' => $address->id,
                     'subtotal' => $subtotal,
+                    'discount_amount' => $discountAmount,
                     'shipping' => $shipping,
-                    'total' => $subtotal + $shipping,
+                    'total' => $finalTotal,
                     'status' => 'pending',
                     'payment_method' => $validated['payment_method'],
+                    'coupon_code' => $appliedCouponCode,
+                    'notes' => $validated['notes'] ?? null,
                 ]);
 
                 $order->items()->createMany($itemsData);
@@ -146,5 +178,34 @@ class OrderController extends BaseApiController
         $order->load(['items', 'address']);
 
         return $this->success(new OrderResource($order), 'تم إنشاء الطلب بنجاح', 201);
+    }
+
+    /**
+     * إلغاء الطلب من قِبل العميل (متاح فقط عندما يكون الطلب في حالة قيد المعالجة pending)
+     */
+    public function cancel(Request $request, Order $order): JsonResponse
+    {
+        if ($order->user_id !== $request->user()->id) {
+            return $this->error('غير مصرح لك بإلغاء هذا الطلب', 403);
+        }
+
+        if ($order->status !== 'pending') {
+            return $this->error('لا يمكن إلغاء الطلب بعد بدء التجهيز أو الشحن', 422);
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->load('items');
+            foreach ($order->items as $item) {
+                if ($item->product_id) {
+                    Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+                }
+            }
+
+            $order->update(['status' => 'cancelled']);
+        });
+
+        $order->load(['items.product', 'address']);
+
+        return $this->success(new OrderResource($order), 'تم إلغاء الطلب بنجاح');
     }
 }
