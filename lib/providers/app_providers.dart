@@ -83,7 +83,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _checkAuthStatus() async {
     final token = await _storage.read(key: 'auth_token');
-    if (token == null || token.isEmpty) {
+    if (token == null || token.isEmpty || token == 'dummy_token') {
+      if (token == 'dummy_token') {
+        try {
+          await _storage.delete(key: 'auth_token');
+        } catch (_) {}
+      }
       return;
     }
 
@@ -91,8 +96,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isAuthenticated: true);
     FirebaseNotificationService.syncToken();
 
-    // استعادة بيانات المستخدم نفسها (وليس التوكن فقط) حتى لا تختفي
-    // صلاحيات لوحة التحكم عند إعادة تشغيل التطبيق.
+    // استعادة بيانات المستخدم نفسها (وليس التوكن فقط)
     await refreshUser();
   }
 

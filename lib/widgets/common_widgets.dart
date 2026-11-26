@@ -267,6 +267,17 @@ class ProductCard extends ConsumerWidget {
                     left: 8,
                     child: GestureDetector(
                       onTap: () {
+                        final auth = ref.read(authProvider);
+                        if (!auth.isAuthenticated || auth.user == null) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('الرجاء تسجيل الدخول لإضافة المنتجات إلى المفضلة'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
                         ref.read(wishlistProvider.notifier).toggleFavorite(product);
                       },
                       child: Container(

@@ -296,10 +296,26 @@ class MainNavigationWrapper extends StatelessWidget {
       // زر السلة العائم مع عدّاد عدد المنتجات
       floatingActionButton: Consumer(
         builder: (context, ref, _) {
-          final itemsCount =
-              ref.watch(cartProvider.select((s) => s.itemsCount));
+          final auth = ref.watch(authProvider);
+          final isLoggedIn = auth.isAuthenticated && auth.user != null;
+          final itemsCount = isLoggedIn
+              ? ref.watch(cartProvider.select((s) => s.itemsCount))
+              : 0;
           return FloatingActionButton(
-            onPressed: () => context.push('/cart'),
+            onPressed: () {
+              if (!isLoggedIn) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('الرجاء تسجيل الدخول أولاً لاستخدام السلة والشراء'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                context.push('/login');
+                return;
+              }
+              context.push('/cart');
+            },
             backgroundColor: AppColors.primary,
             child: Stack(
               clipBehavior: Clip.none,

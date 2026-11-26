@@ -13,10 +13,22 @@ import '../widgets/common_widgets.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
+  void _requireLogin(BuildContext context, String featureName) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('الرجاء تسجيل الدخول أولاً للوصول إلى $featureName'),
+        backgroundColor: AppColors.error,
+      ),
+    );
+    context.push('/login');
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
+    final isLoggedIn = authState.isAuthenticated && user != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -27,7 +39,7 @@ class ProfileScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // بطاقة المستخدم
+            // بطاقة المستخدم (أو بطاقة الزائر عند عدم تسجيل الدخول)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -38,56 +50,125 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
-                children: [
-                  // صورة المستخدم
-                  CircleAvatar(
-                    radius: 35,
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      user?.name.substring(0, 1) ?? 'أ',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // معلومات المستخدم
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: isLoggedIn
+                  ? Row(
                       children: [
-                        Text(
-                          user?.name ?? 'أحمد محمد',
-                          style: const TextStyle(
+                        CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Colors.white,
+                          child: Text(
+                            user.name.isNotEmpty
+                                ? user.name.substring(0, 1)
+                                : 'م',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                user.email,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.white),
+                          onPressed: () => context.push('/edit-profile'),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        const CircleAvatar(
+                          radius: 34,
+                          backgroundColor: Colors.white24,
+                          child: Icon(
+                            Icons.person_outline,
+                            size: 38,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'أهلاً بك كزائر 👋',
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          user?.email ?? 'test@test.com',
-                          style: const TextStyle(
-                            fontSize: 14,
+                        const Text(
+                          'سجّل دخولك للاستمتاع بالشراء ومتابعة طلباتك ومفضلتك',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
                             color: Colors.white70,
                           ),
                         ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () => context.push('/login'),
+                                child: const Text(
+                                  'تسجيل الدخول',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () => context.push('/register'),
+                                child: const Text(
+                                  'إنشاء حساب',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ),
-                  // زر التعديل
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.white),
-                    onPressed: () => context.push('/edit-profile'),
-                  ),
-                ],
-              ),
             ),
-            // صلاحيات لوحة التحكم — تظهر للأدمن فقط
-            if (user != null && user.canAccessAdminPanel) ...[
+            // صلاحيات لوحة التحكم — تظهر للأدمن المسجل فقط
+            if (isLoggedIn && user.canAccessAdminPanel) ...[
               const SizedBox(height: 16),
               _AdminPermissionsCard(permissions: user.adminPermissions),
             ],
@@ -99,17 +180,23 @@ class ProfileScreen extends ConsumerWidget {
                 _MenuItem(
                   icon: Icons.receipt_long_outlined,
                   title: 'طلباتي',
-                  onTap: () => context.push('/orders'),
+                  onTap: () => isLoggedIn
+                      ? context.push('/orders')
+                      : _requireLogin(context, 'طلباتي'),
                 ),
                 _MenuItem(
                   icon: Icons.location_on_outlined,
                   title: 'عناويني',
-                  onTap: () => context.push('/addresses'),
+                  onTap: () => isLoggedIn
+                      ? context.push('/addresses')
+                      : _requireLogin(context, 'عناويني'),
                 ),
                 _MenuItem(
                   icon: Icons.favorite_outline,
                   title: 'المفضلة',
-                  onTap: () => context.go('/wishlist'),
+                  onTap: () => isLoggedIn
+                      ? context.go('/wishlist')
+                      : _requireLogin(context, 'المفضلة'),
                 ),
               ],
             ),
@@ -125,7 +212,9 @@ class ProfileScreen extends ConsumerWidget {
                 _MenuItem(
                   icon: Icons.notifications_outlined,
                   title: 'الإشعارات',
-                  onTap: () => context.push('/notifications'),
+                  onTap: () => isLoggedIn
+                      ? context.push('/notifications')
+                      : _requireLogin(context, 'الإشعارات'),
                 ),
                 _MenuItem(
                   icon: Icons.language_outlined,
@@ -160,8 +249,8 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 16),
-            // قسم لوحة التحكم — يظهر فقط لمن يملك صلاحية الوصول للوحة
-            if (user != null && user.canAccessAdminPanel) ...[
+            // قسم لوحة التحكم — يظهر فقط للأدمن المسجل
+            if (isLoggedIn && user.canAccessAdminPanel) ...[
               _MenuSection(
                 title: 'الإدارة',
                 items: [
@@ -175,41 +264,48 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
             const SizedBox(height: 24),
-            // زر تسجيل الخروج
-            CustomButton(
-              text: 'تسجيل الخروج',
-              isOutlined: true,
-              icon: Icons.logout,
-              onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('تسجيل الخروج'),
-                    content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('إلغاء'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text(
-                          'تسجيل الخروج',
-                          style: TextStyle(color: AppColors.error),
+            // زر تسجيل الخروج (يظهر فقط للمستخدم المسجل) أو تسجيل الدخول للزائر
+            if (isLoggedIn)
+              CustomButton(
+                text: 'تسجيل الخروج',
+                isOutlined: true,
+                icon: Icons.logout,
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('تسجيل الخروج'),
+                      content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('إلغاء'),
                         ),
-                      ),
-                    ],
-                  ),
-                );
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text(
+                            'تسجيل الخروج',
+                            style: TextStyle(color: AppColors.error),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
 
-                if (confirmed == true && context.mounted) {
-                  await ref.read(authProvider.notifier).logout();
-                  if (context.mounted) {
-                    context.go('/login');
+                  if (confirmed == true && context.mounted) {
+                    await ref.read(authProvider.notifier).logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
                   }
-                }
-              },
-            ),
+                },
+              )
+            else
+              CustomButton(
+                text: 'تسجيل الدخول إلى حسابك',
+                icon: Icons.login_rounded,
+                onPressed: () => context.push('/login'),
+              ),
             const SizedBox(height: 24),
             // نسخة التطبيق
             const Text(

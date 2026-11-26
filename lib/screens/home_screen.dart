@@ -113,6 +113,17 @@ class HomeScreen extends ConsumerWidget {
                                               color: Colors.white,
                                             ),
                                             onPressed: () {
+                                              final auth = ref.read(authProvider);
+                                              if (!auth.isAuthenticated || auth.user == null) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('الرجاء تسجيل الدخول أولاً لعرض الإشعارات'),
+                                                    backgroundColor: AppColors.error,
+                                                  ),
+                                                );
+                                                context.push('/login');
+                                                return;
+                                              }
                                               context.push('/notifications');
                                             },
                                           ),
@@ -722,6 +733,24 @@ class WishlistScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+    final isLoggedIn = authState.isAuthenticated && authState.user != null;
+    if (!isLoggedIn) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('المفضلة'),
+          centerTitle: true,
+        ),
+        body: EmptyState(
+          icon: Icons.lock_outline_rounded,
+          title: 'سجّل دخولك لعرض المفضلة',
+          subtitle: 'يمكنك حفظ منتجاتك المفضلة والشراء بعد تسجيل الدخول إلى حسابك',
+          buttonText: 'تسجيل الدخول',
+          onButtonPressed: () => context.push('/login'),
+        ),
+      );
+    }
+
     final wishlist = ref.watch(wishlistProvider);
 
     return Scaffold(
@@ -870,6 +899,17 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                         : Icons.favorite_border,
                                     color: isFavorite ? Colors.red : null,
                                     onPressed: () {
+                                      final auth = ref.read(authProvider);
+                                      if (!auth.isAuthenticated || auth.user == null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('الرجاء تسجيل الدخول لإضافة المنتجات إلى المفضلة'),
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                        context.push('/login');
+                                        return;
+                                      }
                                       ref
                                           .read(wishlistProvider.notifier)
                                           .toggleFavorite(product);
@@ -1242,13 +1282,12 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     child: CustomButton(
                       text: 'إضافة إلى السلة 🛒',
                       onPressed: () {
-                        final isAuthenticated =
-                            ref.read(authProvider).isAuthenticated;
-                        if (!isAuthenticated) {
+                        final auth = ref.read(authProvider);
+                        if (!auth.isAuthenticated || auth.user == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                  'الرجاء تسجيل الدخول لإضافة المنتجات إلى السلة'),
+                                  'الرجاء تسجيل الدخول لإضافة المنتجات إلى السلة والشراء'),
                               backgroundColor: AppColors.error,
                             ),
                           );

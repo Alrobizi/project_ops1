@@ -25,6 +25,24 @@ class CartScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final isLoggedIn = auth.isAuthenticated && auth.user != null;
+    if (!isLoggedIn) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('سلة المشتريات'),
+          centerTitle: true,
+        ),
+        body: EmptyState(
+          icon: Icons.lock_outline_rounded,
+          title: 'سجّل دخولك للتسوق والشراء',
+          subtitle: 'قم بتسجيل الدخول لإضافة المنتجات إلى السلة وإتمام طلباتك',
+          buttonText: 'تسجيل الدخول',
+          onButtonPressed: () => context.push('/login'),
+        ),
+      );
+    }
+
     final cart = ref.watch(cartProvider);
     final cartNotifier = ref.read(cartProvider.notifier);
 
@@ -2215,6 +2233,24 @@ class _DeliveryEstimateCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final isLoggedIn = auth.isAuthenticated && auth.user != null;
+    if (!isLoggedIn) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('سلة المشتريات'),
+          centerTitle: true,
+        ),
+        body: EmptyState(
+          icon: Icons.lock_outline_rounded,
+          title: 'سجّل دخولك للتسوق والشراء',
+          subtitle: 'قم بتسجيل الدخول لإضافة المنتجات إلى السلة وإتمام طلباتك',
+          buttonText: 'تسجيل الدخول',
+          onButtonPressed: () => context.push('/login'),
+        ),
+      );
+    }
+
     final cart = ref.watch(cartProvider);
 
     // موقع البائع: من أول منتج في السلة (كل المنتجات افتراضياً من عدن)
